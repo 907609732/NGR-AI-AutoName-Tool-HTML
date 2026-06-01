@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.3 module: uploads-editor-translator.js */
+/* NGRAI AutoName Tool V2.4 module: uploads-editor-translator.js */
 function bindUploads() {
   els.folderInput.addEventListener("change", (event) => addFiles([...event.target.files]));
   els.singleInput.addEventListener("change", (event) => addFiles([...event.target.files]));
