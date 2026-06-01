@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.0 module: rendering.js */
+/* NGRAI AutoName Tool V2.1 module: rendering.js */
 function renderAssetList() {
   const problemCount = assets.filter((asset) => asset.dimensionIssue).length;
   els.fileCount.textContent = assets.length + " 张" + (problemCount ? " / " + problemCount + " 张问题" : "");
@@ -17,7 +17,12 @@ function renderAssetList() {
   els.assetList.className = "asset-list-body" + (listDisplayMode === "compact" ? " compact-list-mode" : "");
   els.assetList.innerHTML = "";
   const duplicateContext = buildDuplicateStatusContext();
-  visibleAssets.forEach((asset) => {
+  const renderLimit = Math.min(Math.max(assetRenderLimit || ASSET_RENDER_BATCH_SIZE, ASSET_RENDER_BATCH_SIZE), visibleAssets.length);
+  const renderedAssets = visibleAssets.slice(0, renderLimit);
+  if (visibleAssets.length > renderLimit) {
+    els.fileCount.textContent += " / 已显示 " + renderLimit + " 张";
+  }
+  renderedAssets.forEach((asset) => {
     const row = document.createElement("div");
     row.className = "asset-item" + (asset.dimensionIssue ? " has-issue" : asset.dimensionWarning ? " has-warning" : "") + (asset.id === selectedId ? " active" : "");
     row.addEventListener("click", () => {
@@ -35,7 +40,7 @@ function renderAssetList() {
     });
 
     const img = document.createElement("img");
-    img.src = asset.url;
+    img.src = getAssetPreviewUrl(asset);
     img.alt = asset.originalBase;
     img.loading = "lazy";
     img.decoding = "async";
@@ -234,6 +239,10 @@ function renderAssetList() {
     row.append(checkbox, img, text, editor);
     els.assetList.appendChild(row);
   });
+  renderListPager(els.assetList, renderLimit, visibleAssets.length, () => {
+    assetRenderLimit = Math.min((assetRenderLimit || ASSET_RENDER_BATCH_SIZE) + ASSET_RENDER_BATCH_SIZE, visibleAssets.length);
+    renderAssetList();
+  });
   protectEditableShortcuts(els.assetList);
 }
 
@@ -305,12 +314,17 @@ function renderDetectionList() {
 
   els.detectionList.className = "asset-list-body detection-list";
   els.detectionList.innerHTML = "";
-  visibleAssets.forEach((asset) => {
+  const renderLimit = Math.min(Math.max(detectionRenderLimit || DETECTION_RENDER_BATCH_SIZE, DETECTION_RENDER_BATCH_SIZE), visibleAssets.length);
+  const renderedAssets = visibleAssets.slice(0, renderLimit);
+  if (visibleAssets.length > renderLimit) {
+    els.detectionCount.textContent += " / 已显示 " + renderLimit + " 张";
+  }
+  renderedAssets.forEach((asset) => {
     const row = document.createElement("div");
     row.className = "asset-item detection-item" + (asset.hasIssue ? " has-issue" : asset.hasWarning ? " has-warning" : " passed");
 
     const img = document.createElement("img");
-    img.src = asset.url;
+    img.src = getAssetPreviewUrl(asset);
     img.alt = asset.name;
     img.loading = "lazy";
     img.decoding = "async";
@@ -331,6 +345,25 @@ function renderDetectionList() {
     row.append(img, meta);
     els.detectionList.appendChild(row);
   });
+  renderListPager(els.detectionList, renderLimit, visibleAssets.length, () => {
+    detectionRenderLimit = Math.min((detectionRenderLimit || DETECTION_RENDER_BATCH_SIZE) + DETECTION_RENDER_BATCH_SIZE, visibleAssets.length);
+    renderDetectionList();
+  });
+}
+
+function renderListPager(container, renderedCount, totalCount, onMore) {
+  if (renderedCount >= totalCount) return;
+  const pager = document.createElement("div");
+  pager.className = "list-pager";
+  const text = document.createElement("span");
+  text.textContent = "已显示 " + renderedCount + " / " + totalCount + " 张";
+  const more = document.createElement("button");
+  more.type = "button";
+  more.className = "ghost-action";
+  more.textContent = "继续显示";
+  more.addEventListener("click", onMore);
+  pager.append(text, more);
+  container.appendChild(pager);
 }
 
 function compareDetectionWarnings(left, right) {

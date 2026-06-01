@@ -1002,6 +1002,24 @@ button:disabled {
   padding: 6px;
 }
 
+.list-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 14px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.list-pager .ghost-action {
+  width: auto;
+  min-height: 34px;
+  padding: 0 18px;
+  border-radius: 8px;
+}
+
 .work-view .asset-item {
   gap: 8px;
   min-height: 140px;

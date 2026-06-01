@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.0 module: config.js */
+/* NGRAI AutoName Tool V2.1 module: config.js */
 const STORAGE_KEY = "ngr-ai-autoname-rules";
 const SCHEME_KEY = "ngr-ai-autoname-rule-schemes";
 const PROJECTS_KEY = "ngr-ai-autoname-projects";
@@ -10,6 +10,11 @@ const ACTIVE_DETECTION_PROFILE_KEY = "ngr-ai-autoname-active-detection-profile";
 const LIST_DISPLAY_MODE_KEY = "ngr-ai-autoname-list-display-mode";
 const LIST_SORT_MODE_KEY = "ngr-ai-autoname-list-sort-mode";
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"];
+const UPLOAD_PROCESS_BATCH_SIZE = 80;
+const UPLOAD_CONCURRENCY = 4;
+const ASSET_RENDER_BATCH_SIZE = 120;
+const DETECTION_RENDER_BATCH_SIZE = 160;
+const MAX_DUPLICATE_SCAN_ASSETS = 600;
 const NGR_TRAINING_VERSION = 6;
 const YYSLS_TRAINING_VERSION = 1;
 const FORBIDDEN_NAMING_TERMS = ["module", "modules"];

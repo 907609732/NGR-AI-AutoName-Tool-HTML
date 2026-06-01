@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.0 module: uploads-editor-translator.js */
+/* NGRAI AutoName Tool V2.1 module: uploads-editor-translator.js */
 function bindUploads() {
   els.folderInput.addEventListener("change", (event) => addFiles([...event.target.files]));
   els.singleInput.addEventListener("change", (event) => addFiles([...event.target.files]));
@@ -90,7 +90,7 @@ function bindDetection() {
     els.detectionRulesToggle.setAttribute("aria-expanded", String(!isHidden));
   });
   els.clearDetectionAssets.addEventListener("click", () => {
-    detectionAssets = [];
+    clearDetectionAssetList();
     renderDetectionList();
     showToast("检测列表已清空");
   });
@@ -247,11 +247,13 @@ function bindEditor() {
   els.exportFiles.addEventListener("click", exportRenamedFiles);
   els.listDisplayMode.addEventListener("change", () => {
     listDisplayMode = els.listDisplayMode.value === "compact" ? "compact" : "full";
+    assetRenderLimit = ASSET_RENDER_BATCH_SIZE;
     localStorage.setItem(LIST_DISPLAY_MODE_KEY, listDisplayMode);
     renderAssetList();
   });
   els.listSortMode.addEventListener("change", () => {
     listSortMode = normalizeListSortMode(els.listSortMode.value);
+    assetRenderLimit = ASSET_RENDER_BATCH_SIZE;
     localStorage.setItem(LIST_SORT_MODE_KEY, listSortMode);
     renderAssetList();
   });

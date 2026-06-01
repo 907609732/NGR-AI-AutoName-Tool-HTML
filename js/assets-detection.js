@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.0 module: assets-detection.js */
+/* NGRAI AutoName Tool V2.1 module: assets-detection.js */
 function applyBatchSuffix() {
   const suffix = sanitizeName(els.batchSuffix.value);
   if (!suffix) {
@@ -32,16 +32,21 @@ function applyBatchSequence() {
 }
 
 function removeSelectedAssets() {
-  const targetIds = assets.filter((asset) => asset.checked || asset.id === selectedId).map((asset) => asset.id);
-  if (!targetIds.length) return;
-  assets = assets.filter((asset) => !targetIds.includes(asset.id));
+  const targetIds = new Set(assets.filter((asset) => asset.checked || asset.id === selectedId).map((asset) => asset.id));
+  if (!targetIds.size) return;
+  assets.forEach((asset) => {
+    if (targetIds.has(asset.id)) revokeAssetPreviewUrl(asset);
+  });
+  assets = assets.filter((asset) => !targetIds.has(asset.id));
   if (!assets.some((asset) => asset.id === selectedId)) selectedId = assets[0]?.id || null;
+  assetRenderLimit = ASSET_RENDER_BATCH_SIZE;
   renderAssetList();
   showToast("已删除选中的图片");
 }
 
 function toggleProblemFilter() {
   showProblemOnly = !showProblemOnly;
+  assetRenderLimit = ASSET_RENDER_BATCH_SIZE;
   els.problemFilter.textContent = showProblemOnly ? "显示全部图片" : "只看问题图片";
   els.problemFilter.setAttribute("aria-pressed", String(showProblemOnly));
   renderAssetList();
@@ -50,6 +55,7 @@ function toggleProblemFilter() {
 function toggleDetectionProblemFilter() {
   showDetectionProblemOnly = !showDetectionProblemOnly;
   if (showDetectionProblemOnly) showDetectionWarningOnly = false;
+  detectionRenderLimit = DETECTION_RENDER_BATCH_SIZE;
   syncDetectionFilterButtons();
   renderDetectionList();
 }
@@ -57,6 +63,7 @@ function toggleDetectionProblemFilter() {
 function toggleDetectionWarningFilter() {
   showDetectionWarningOnly = !showDetectionWarningOnly;
   if (showDetectionWarningOnly) showDetectionProblemOnly = false;
+  detectionRenderLimit = DETECTION_RENDER_BATCH_SIZE;
   syncDetectionFilterButtons();
   renderDetectionList();
 }
@@ -75,18 +82,28 @@ async function addFiles(files) {
     return;
   }
 
-  const additions = await mapWithConcurrency(imageFiles, fileToAsset, 8);
   const seen = new Set(assets.map((asset) => asset.key));
   let loadedCount = 0;
   let loadedIssueCount = 0;
-  additions.forEach((asset) => {
-    if (!seen.has(asset.key)) {
-      assets.push(asset);
-      seen.add(asset.key);
-      loadedCount += 1;
-      if (asset.dimensionIssue) loadedIssueCount += 1;
+  showToast("开始载入 " + imageFiles.length + " 张图片，正在分批处理");
+  for (let start = 0; start < imageFiles.length; start += UPLOAD_PROCESS_BATCH_SIZE) {
+    const batch = imageFiles.slice(start, start + UPLOAD_PROCESS_BATCH_SIZE);
+    const additions = await mapWithConcurrency(batch, fileToAsset, UPLOAD_CONCURRENCY);
+    additions.forEach((asset) => {
+      if (!seen.has(asset.key)) {
+        assets.push(asset);
+        seen.add(asset.key);
+        loadedCount += 1;
+        if (asset.dimensionIssue) loadedIssueCount += 1;
+      }
+    });
+    if (!selectedId && assets.length) selectedId = assets[0].id;
+    if (start === 0 || start + batch.length >= imageFiles.length || loadedCount % (ASSET_RENDER_BATCH_SIZE * 2) === 0) {
+      renderAssetList();
+      els.fileCount.textContent = assets.length + " 张 / 正在载入 " + Math.min(start + batch.length, imageFiles.length) + "/" + imageFiles.length;
     }
-  });
+    await yieldToBrowser();
+  }
   if (!selectedId && assets.length) selectedId = assets[0].id;
   renderAssetList();
   if (loadedIssueCount) {
@@ -103,17 +120,26 @@ async function addDetectionFiles(files) {
     return;
   }
 
-  const additions = await mapWithConcurrency(imageFiles, fileToDetectionAsset, 8);
   const seen = new Set(detectionAssets.map((asset) => asset.key));
   let loadedCount = 0;
   let issueCount = 0;
-  additions.forEach((asset) => {
-    if (seen.has(asset.key)) return;
-    detectionAssets.push(asset);
-    seen.add(asset.key);
-    loadedCount += 1;
-    if (asset.hasIssue) issueCount += 1;
-  });
+  showToast("开始检测 " + imageFiles.length + " 张图片，正在分批处理");
+  for (let start = 0; start < imageFiles.length; start += UPLOAD_PROCESS_BATCH_SIZE) {
+    const batch = imageFiles.slice(start, start + UPLOAD_PROCESS_BATCH_SIZE);
+    const additions = await mapWithConcurrency(batch, fileToDetectionAsset, UPLOAD_CONCURRENCY);
+    additions.forEach((asset) => {
+      if (seen.has(asset.key)) return;
+      detectionAssets.push(asset);
+      seen.add(asset.key);
+      loadedCount += 1;
+      if (asset.hasIssue) issueCount += 1;
+    });
+    if (start === 0 || start + batch.length >= imageFiles.length || loadedCount % (DETECTION_RENDER_BATCH_SIZE * 2) === 0) {
+      renderDetectionList();
+      els.detectionCount.textContent = detectionAssets.length + " 张 / 正在检测 " + Math.min(start + batch.length, imageFiles.length) + "/" + imageFiles.length;
+    }
+    await yieldToBrowser();
+  }
   updateSimilarResourceWarnings();
   renderDetectionList();
   showToast(issueCount ? "已检测 " + loadedCount + " 张，其中 " + issueCount + " 张有问题" : "已检测 " + loadedCount + " 张，全部通过");
@@ -123,7 +149,7 @@ function isSupportedImage(file) {
   return IMAGE_TYPES.includes(file.type) || /\.(png|jpe?g|webp|gif|svg)$/i.test(file.name);
 }
 
-async function mapWithConcurrency(items, mapper, limit = 8) {
+async function mapWithConcurrency(items, mapper, limit = UPLOAD_CONCURRENCY) {
   const results = new Array(items.length);
   let nextIndex = 0;
   const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
@@ -141,6 +167,7 @@ async function mapWithConcurrency(items, mapper, limit = 8) {
 async function fileToAsset(file) {
   const url = URL.createObjectURL(file);
   const dimensions = await readImageDimensions(url).catch(() => ({ width: 0, height: 0 }));
+  URL.revokeObjectURL(url);
   const validation = validateUploadDimensions(dimensions);
   const originalBase = file.name.replace(/\.[^.]+$/, "");
   const extension = getExtension(file.name);
@@ -150,7 +177,7 @@ async function fileToAsset(file) {
     id,
     key,
     file,
-    url,
+    url: "",
     originalBase,
     extension,
     dimensions,
@@ -175,25 +202,38 @@ async function fileToAsset(file) {
 async function fileToDetectionAsset(file) {
   const url = URL.createObjectURL(file);
   const dimensions = await readImageDimensions(url).catch(() => ({ width: 0, height: 0 }));
+  URL.revokeObjectURL(url);
   const result = validateDetectionDimensions(dimensions, getActiveDetectionProfile());
   const formatMessages = validateDetectionFormat(file);
   if (formatMessages.length) {
     result.messages = [...(result.messages || []), ...formatMessages];
     result.hasIssue = true;
   }
-  const fingerprint = await imageFileToFingerprint(file).catch(() => null);
+  const duplicateConfig = getDuplicateSensitivityConfig(getActiveDetectionProfile().duplicateSensitivity);
+  const fingerprint = duplicateConfig.disabled ? null : await imageFileToFingerprint(file).catch(() => null);
   const id = crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random();
   const key = (file.webkitRelativePath || file.name) + "-" + file.size + "-" + file.lastModified;
   return {
     id,
     key,
     file,
-    url,
+    url: "",
     name: file.webkitRelativePath || file.name,
     dimensions,
     fingerprint,
     ...result,
   };
+}
+
+function getAssetPreviewUrl(asset) {
+  if (!asset.url && asset.file) asset.url = URL.createObjectURL(asset.file);
+  return asset.url || "";
+}
+
+function revokeAssetPreviewUrl(asset) {
+  if (!asset?.url) return;
+  URL.revokeObjectURL(asset.url);
+  asset.url = "";
 }
 
 function validateDetectionFormat(file) {
@@ -329,15 +369,12 @@ async function imageFileToFingerprint(file) {
 
 function updateSimilarResourceWarnings() {
   const duplicateConfig = getDuplicateSensitivityConfig(getActiveDetectionProfile().duplicateSensitivity);
-  detectionAssets.forEach((asset) => {
-    asset.similarNames = [];
-  });
+  clearSimilarResourceWarnings();
   if (duplicateConfig.disabled) {
-    detectionAssets.forEach((asset) => {
-      const baseWarnings = (asset.warnings || []).filter((message) => !message.startsWith("疑似重复资源"));
-      asset.warnings = baseWarnings;
-      asset.hasWarning = Boolean(asset.warnings.length);
-    });
+    return;
+  }
+  if (detectionAssets.length > MAX_DUPLICATE_SCAN_ASSETS) {
+    showToast("图片数量超过 " + MAX_DUPLICATE_SCAN_ASSETS + " 张，已跳过重复资源检测以避免卡死");
     return;
   }
   for (let index = 0; index < detectionAssets.length; index += 1) {
@@ -360,6 +397,21 @@ function updateSimilarResourceWarnings() {
     asset.warnings = [...baseWarnings, ...similarWarnings];
     asset.hasWarning = Boolean(asset.warnings.length);
   });
+}
+
+function clearSimilarResourceWarnings() {
+  detectionAssets.forEach((asset) => {
+    asset.similarNames = [];
+    const baseWarnings = (asset.warnings || []).filter((message) => !message.startsWith("疑似重复资源"));
+    asset.warnings = baseWarnings;
+    asset.hasWarning = Boolean(asset.warnings.length);
+  });
+}
+
+function clearDetectionAssetList() {
+  detectionAssets.forEach(revokeAssetPreviewUrl);
+  detectionAssets = [];
+  detectionRenderLimit = DETECTION_RENDER_BATCH_SIZE;
 }
 
 function getDuplicateSensitivityConfig(level) {

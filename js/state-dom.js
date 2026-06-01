@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.0 module: state-dom.js */
+/* NGRAI AutoName Tool V2.1 module: state-dom.js */
 let projects;
 let activeProjectId;
 let schemes;
@@ -22,6 +22,8 @@ let listDisplayMode;
 let listSortMode;
 let knowledgeCacheKey;
 let knowledgeCacheValue;
+let assetRenderLimit;
+let detectionRenderLimit;
 
 function bootstrapState() {
   projects = loadProjects();
@@ -47,6 +49,8 @@ function bootstrapState() {
   listSortMode = loadListSortMode();
   knowledgeCacheKey = "";
   knowledgeCacheValue = null;
+  assetRenderLimit = ASSET_RENDER_BATCH_SIZE;
+  detectionRenderLimit = DETECTION_RENDER_BATCH_SIZE;
 }
 
 const els = {
