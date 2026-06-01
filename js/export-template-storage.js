@@ -1,0 +1,1058 @@
+/* NGRAI AutoName Tool V2.0 module: export-template-storage.js */
+async function exportRenamedFiles() {
+  if (!assets.length) {
+    showToast("没有可导出的图片");
+    return;
+  }
+  const incomplete = assets.find((asset) => !asset.finalBaseName);
+  if (incomplete) {
+    selectedId = incomplete.id;
+    renderAssetList();
+    showToast("还有图片没有最终名称，请先确认");
+    return;
+  }
+
+  if ("showDirectoryPicker" in window) {
+    try {
+      const dir = await window.showDirectoryPicker({ mode: "readwrite" });
+      for (const asset of assets) {
+        const fileHandle = await dir.getFileHandle(buildExportName(asset), { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(asset.file);
+        await writable.close();
+      }
+      showToast("导出完成，可在所选文件夹查看");
+    } catch (error) {
+      if (error.name !== "AbortError") showToast("导出失败，请检查浏览器文件夹权限");
+    }
+    return;
+  }
+
+  assets.forEach((asset) => {
+    const link = document.createElement("a");
+    link.href = asset.url;
+    link.download = buildExportName(asset);
+    link.click();
+  });
+  showToast("浏览器不支持选择文件夹，已改为逐个下载");
+}
+
+function buildExportName(asset) {
+  return buildAssetPrefix(asset) + formatNamingName(asset.finalBaseName) + asset.extension;
+}
+
+function buildAssetPrefix(asset) {
+  const legacyPrefix = sanitizePrefix(asset?.customPrefix);
+  if (legacyPrefix) return legacyPrefix.endsWith("_") ? legacyPrefix : legacyPrefix + "_";
+  const separator = rules.separator || "_";
+  const parts = [
+    buildAssetBasePrefix(asset),
+    buildAssetProjectName(asset),
+    buildAssetViewName(asset),
+  ].filter(Boolean);
+  return parts.join(separator) + separator;
+}
+
+function buildAssetBasePrefix(asset) {
+  if (asset?.customBasePrefix === "__none") return "";
+  const rawPrefix = asset?.customBasePrefix !== "" && asset?.customBasePrefix != null ? asset.customBasePrefix : rules.basePrefix;
+  const prefix = sanitizeName(rawPrefix || "");
+  return ["", "T_UI", "T_UI_Img", "T_UI_Icon"].includes(prefix) ? prefix : defaultRules.basePrefix;
+}
+
+function buildAssetProjectName(asset) {
+  return sanitizeName(asset?.customProjectName || rules.projectName) || defaultRules.projectName;
+}
+
+function buildAssetViewName(asset) {
+  return sanitizeName(asset?.customViewName || rules.viewName);
+}
+
+function getExtension(name) {
+  const match = name.match(/\.[^.]+$/);
+  return match ? match[0].toLowerCase() : ".png";
+}
+
+function collectRulesForm() {
+  return {
+    schemeName: els.schemeName.value.trim() || defaultRules.schemeName,
+    basePrefix: sanitizeName(els.workBasePrefix.value || els.basePrefix.value),
+    projectName: sanitizeName(els.workProjectName.value || els.projectName.value) || defaultRules.projectName,
+    viewName: sanitizeName(els.workViewName.value),
+    separator: els.separator.value || defaultRules.separator,
+    tags: els.tags.value.trim() || defaultRules.tags,
+    pageTerms: els.pageTerms.value.trim() || defaultRules.pageTerms,
+    componentTerms: els.componentTerms.value.trim() || defaultRules.componentTerms,
+    stateTerms: els.stateTerms.value.trim() || defaultRules.stateTerms,
+    filenameRules: els.filenameRules.value.trim() || defaultRules.filenameRules,
+    contextDocs: els.contextDocs.value.trim(),
+  };
+}
+
+function fillRulesForm() {
+  const project = getActiveProject();
+  els.projectConfigName.value = project.name;
+  els.projectConfigDescription.value = project.description || "";
+  els.schemeName.value = rules.schemeName;
+  els.basePrefix.value = rules.basePrefix;
+  els.workBasePrefix.value = getPrefixPresetValue(rules.basePrefix) === "__none" ? "" : getPrefixPresetValue(rules.basePrefix) || defaultRules.basePrefix;
+  els.prefixPreset.value = getPrefixPresetValue(rules.basePrefix);
+  els.projectName.value = rules.projectName;
+  els.workProjectName.value = rules.projectName;
+  els.workViewName.value = rules.viewName || "";
+  els.separator.value = rules.separator;
+  els.tags.value = rules.tags;
+  els.pageTerms.value = rules.pageTerms;
+  els.componentTerms.value = rules.componentTerms;
+  els.stateTerms.value = rules.stateTerms;
+  els.filenameRules.value = rules.filenameRules;
+  els.contextDocs.value = rules.contextDocs || "";
+}
+
+function fillAiSettings() {
+  els.aiProvider.value = aiSettings.provider;
+  els.aiApiFormat.value = aiSettings.apiFormat;
+  els.aiBaseUrl.value = aiSettings.baseUrl;
+  els.openaiApiKey.value = aiSettings.apiKey;
+  els.openaiModel.value = aiSettings.model;
+  els.aiProviderNote.value = aiSettings.providerNote;
+}
+
+function exportSchemeTemplate() {
+  const current = collectRulesForm();
+  const workbook = buildExcelTemplate(current);
+  const blob = new Blob([workbook], { type: "application/vnd.ms-excel;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = sanitizeName(current.schemeName) + "_命名方案模板.xls";
+  link.click();
+  URL.revokeObjectURL(url);
+  showToast("已导出多页签方案模板");
+}
+
+async function importSchemeTemplate(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const imported = parseSchemeTemplate(text, file.name);
+    rules = normalizeLoadedRules({ ...defaultRules, ...imported });
+    saveRules(rules);
+    upsertScheme(rules);
+    fillRulesForm();
+    renderSchemeSelect();
+    updateRulePreview();
+    updateActiveRuleText();
+    renderAssetList();
+    showToast("已导入方案模板：" + rules.schemeName);
+  } catch (error) {
+    showToast("导入失败，请检查模板格式");
+  } finally {
+    event.target.value = "";
+  }
+}
+
+function buildExcelTemplate(current) {
+  const pageRows = parseList(current.pageTerms).map((value, index) => [index + 1, value, "页面英文名，用于生成 Home_BG 等名称"]);
+  const componentRows = parseList(current.componentTerms).map((value, index) => [index + 1, value, "组件英文名，用于识别按钮、背景、图标等"]);
+  const stateRows = parseList(current.stateTerms).map((value, index) => [index + 1, value, "状态英文名，用于 Normal、Hover 等交互状态"]);
+  const ruleRows = parseFilenameRules(current.filenameRules).map((rule) => [rule.keyword, rule.value, "原始文件名包含关键词时，自动转换为英文名"]);
+  const sheets = [
+    {
+      name: "使用说明",
+      rows: [
+        ["NGRAI辅助UI切图命名工具 - 方案模板"],
+        ["请在各页签中修改“值”或词库内容，保存后回到网页导入。"],
+        ["基础配置页：维护方案名称、固定前缀、工程名、分隔符、常用标签。"],
+        ["页面词库/组件词库/状态词库：每行填写一个英文命名词。"],
+        ["文件名匹配规则：第一列填写中文或英文关键词，第二列填写转换后的英文名。"],
+        ["上下文文档：填写项目背景、页面结构和特殊命名约定，AI 会参考这些内容。"],
+        ["不要修改页签名称和表头，否则可能无法导入。"],
+      ],
+    },
+    {
+      name: "基础配置",
+      rows: [
+        ["字段", "值", "说明"],
+        ["方案名称", current.schemeName, "自定义方案名称，会显示在网页的选择方案下拉框中"],
+        ["固定前缀", current.basePrefix, "例如 T_UI"],
+        ["工程名", current.projectName, "当前项目或界面工程名，也可在开始命名页临时修改"],
+        ["分隔符", current.separator, "推荐使用 _"],
+        ["常用标签", current.tags, "多个标签可用英文逗号分隔"],
+      ],
+    },
+    {
+      name: "页面词库",
+      rows: [["序号", "页面英文名", "说明"], ...pageRows],
+    },
+    {
+      name: "组件词库",
+      rows: [["序号", "组件英文名", "说明"], ...componentRows],
+    },
+    {
+      name: "状态词库",
+      rows: [["序号", "状态英文名", "说明"], ...stateRows],
+    },
+    {
+      name: "文件名匹配规则",
+      rows: [["原始文件名关键词", "转换后的英文名", "说明"], ...ruleRows],
+    },
+    {
+      name: "上下文文档",
+      rows: [["项目上下文文档", current.contextDocs || ""]],
+    },
+  ];
+  return [
+    '<?xml version="1.0"?>',
+    '<?mso-application progid="Excel.Sheet"?>',
+    '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">',
+    '<Styles><Style ss:ID="Header"><Font ss:Bold="1"/><Interior ss:Color="#DCEEEF" ss:Pattern="Solid"/></Style></Styles>',
+    sheets.map((sheet) => buildWorksheet(sheet.name, sheet.rows)).join(""),
+    "</Workbook>",
+  ].join("");
+}
+
+function buildWorksheet(name, rows) {
+  return [
+    '<Worksheet ss:Name="' + xmlEscape(name) + '"><Table>',
+    rows.map((row, rowIndex) => {
+      const style = rowIndex === 0 ? ' ss:StyleID="Header"' : "";
+      return "<Row>" + row.map((cell) => '<Cell' + style + '><Data ss:Type="String">' + xmlEscape(cell) + "</Data></Cell>").join("") + "</Row>";
+    }).join(""),
+    "</Table></Worksheet>",
+  ].join("");
+}
+
+function parseSchemeTemplate(text, fileName) {
+  if (/\.csv$/i.test(fileName) || !text.trim().startsWith("<")) {
+    return parseSchemeTemplateCsv(text);
+  }
+  return parseSchemeTemplateWorkbook(text);
+}
+
+function parseSchemeTemplateWorkbook(text) {
+  const xml = new DOMParser().parseFromString(text, "text/xml");
+  if (xml.querySelector("parsererror")) throw new Error("Invalid Excel XML");
+  const next = { ...defaultRules };
+  const pageTerms = readWorksheetValues(xml, "页面词库", 1);
+  const componentTerms = readWorksheetValues(xml, "组件词库", 1);
+  const stateTerms = readWorksheetValues(xml, "状态词库", 1);
+  const rulesRows = readWorksheetRows(xml, "文件名匹配规则").slice(1);
+  const contextRows = readWorksheetRows(xml, "上下文文档").slice(1);
+  const baseRows = readWorksheetRows(xml, "基础配置").slice(1);
+  baseRows.forEach(([field, value]) => {
+    const cleanField = String(field || "").trim();
+    const cleanValue = String(value || "").trim();
+    if (cleanField === "方案名称") next.schemeName = cleanValue || defaultRules.schemeName;
+    if (cleanField === "固定前缀") next.basePrefix = cleanValue || defaultRules.basePrefix;
+    if (cleanField === "工程名") next.projectName = cleanValue || defaultRules.projectName;
+    if (cleanField === "分隔符") next.separator = cleanValue || defaultRules.separator;
+    if (cleanField === "常用标签") next.tags = cleanValue || defaultRules.tags;
+  });
+  if (pageTerms.length) next.pageTerms = pageTerms.join("\n");
+  if (componentTerms.length) next.componentTerms = componentTerms.join("\n");
+  if (stateTerms.length) next.stateTerms = stateTerms.join("\n");
+  const filenameRules = rulesRows
+    .map(([keyword, value]) => [String(keyword || "").trim(), String(value || "").trim()])
+    .filter(([keyword, value]) => keyword && value)
+    .map(([keyword, value]) => keyword + "=" + value);
+  if (filenameRules.length) next.filenameRules = filenameRules.join("\n");
+  const contextDocs = contextRows.map((row) => row.filter(Boolean).join("\n")).filter(Boolean).join("\n");
+  if (contextDocs) next.contextDocs = contextDocs;
+  return next;
+}
+
+function readWorksheetValues(xml, sheetName, columnIndex) {
+  return readWorksheetRows(xml, sheetName)
+    .slice(1)
+    .map((row) => String(row[columnIndex] || "").trim())
+    .filter(Boolean);
+}
+
+function readWorksheetRows(xml, sheetName) {
+  const worksheet = [...xml.getElementsByTagName("Worksheet")].find((sheet) => sheet.getAttribute("ss:Name") === sheetName || sheet.getAttribute("Name") === sheetName);
+  if (!worksheet) return [];
+  return [...worksheet.getElementsByTagName("Row")].map((row) => [...row.getElementsByTagName("Cell")].map((cell) => {
+    const data = cell.getElementsByTagName("Data")[0];
+    return data ? data.textContent : "";
+  }));
+}
+
+function parseSchemeTemplateCsv(text) {
+  const rows = parseCsv(text.replace(/^\ufeff/, ""));
+  const next = { ...defaultRules };
+  const pageTerms = [];
+  const componentTerms = [];
+  const stateTerms = [];
+  const filenameRules = [];
+  rows.slice(1).forEach(([moduleName, field, value]) => {
+    const cleanModule = String(moduleName || "").trim();
+    const cleanField = String(field || "").trim();
+    const cleanValue = String(value || "").trim();
+    if (!cleanModule || !cleanField) return;
+    if (cleanModule === "基础配置") {
+      if (cleanField === "方案名称") next.schemeName = cleanValue || defaultRules.schemeName;
+      if (cleanField === "固定前缀") next.basePrefix = cleanValue || defaultRules.basePrefix;
+      if (cleanField === "工程名") next.projectName = cleanValue || defaultRules.projectName;
+      if (cleanField === "分隔符") next.separator = cleanValue || defaultRules.separator;
+      if (cleanField === "常用标签") next.tags = cleanValue || defaultRules.tags;
+    }
+    if (cleanModule === "页面词库" && cleanValue) pageTerms.push(cleanValue);
+    if (cleanModule === "组件词库" && cleanValue) componentTerms.push(cleanValue);
+    if (cleanModule === "状态词库" && cleanValue) stateTerms.push(cleanValue);
+    if (cleanModule === "文件名匹配规则" && cleanField && cleanValue) filenameRules.push(cleanField + "=" + cleanValue);
+    if (cleanModule === "上下文文档" && cleanValue) next.contextDocs = [next.contextDocs, cleanValue].filter(Boolean).join("\n");
+  });
+  if (pageTerms.length) next.pageTerms = pageTerms.join("\n");
+  if (componentTerms.length) next.componentTerms = componentTerms.join("\n");
+  if (stateTerms.length) next.stateTerms = stateTerms.join("\n");
+  if (filenameRules.length) next.filenameRules = filenameRules.join("\n");
+  return next;
+}
+
+function parseCsv(text) {
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let quoted = false;
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const next = text[index + 1];
+    if (quoted && char === '"' && next === '"') {
+      cell += '"';
+      index += 1;
+    } else if (char === '"') {
+      quoted = !quoted;
+    } else if (!quoted && char === ",") {
+      row.push(cell);
+      cell = "";
+    } else if (!quoted && (char === "\n" || char === "\r")) {
+      if (char === "\r" && next === "\n") index += 1;
+      row.push(cell);
+      if (row.some((item) => item.trim())) rows.push(row);
+      row = [];
+      cell = "";
+    } else {
+      cell += char;
+    }
+  }
+  row.push(cell);
+  if (row.some((item) => item.trim())) rows.push(row);
+  return rows;
+}
+
+function csvCell(value) {
+  const text = String(value || "");
+  return '"' + text.replace(/"/g, '""') + '"';
+}
+
+function xmlEscape(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function renderSchemeSelect() {
+  els.schemeSelect.innerHTML = "";
+  els.workSchemeSelect.innerHTML = "";
+  schemes.forEach((scheme) => {
+    const option = document.createElement("option");
+    option.value = scheme.schemeName;
+    option.textContent = scheme.schemeName;
+    option.selected = scheme.schemeName === rules.schemeName;
+    els.schemeSelect.appendChild(option);
+    const workOption = document.createElement("option");
+    workOption.value = scheme.schemeName;
+    workOption.textContent = scheme.schemeName;
+    workOption.selected = scheme.schemeName === rules.schemeName;
+    els.workSchemeSelect.appendChild(workOption);
+  });
+  els.schemeSelect.value = rules.schemeName;
+  els.workSchemeSelect.value = rules.schemeName;
+}
+
+function renderProjectSelect() {
+  els.projectSelect.innerHTML = "";
+  projects.forEach((project) => {
+    const option = document.createElement("option");
+    option.value = project.id;
+    option.textContent = project.name;
+    option.selected = project.id === activeProjectId;
+    els.projectSelect.appendChild(option);
+  });
+}
+
+function renderDetectionProfileSelect() {
+  els.detectionProfileSelect.innerHTML = "";
+  els.detectionSettingsProfileSelect.innerHTML = "";
+  detectionProfiles.forEach((profile) => {
+    const option = document.createElement("option");
+    option.value = profile.id;
+    option.textContent = profile.name;
+    option.selected = profile.id === activeDetectionProfileId;
+    els.detectionProfileSelect.appendChild(option);
+    const settingsOption = document.createElement("option");
+    settingsOption.value = profile.id;
+    settingsOption.textContent = profile.name;
+    settingsOption.selected = profile.id === activeDetectionProfileId;
+    els.detectionSettingsProfileSelect.appendChild(settingsOption);
+  });
+  els.detectionProfileSelect.value = activeDetectionProfileId;
+  els.detectionSettingsProfileSelect.value = activeDetectionProfileId;
+  els.detectionModeSelect.value = getActiveDetectionProfile().mode;
+  els.duplicateSensitivitySelect.value = getActiveDetectionProfile().duplicateSensitivity;
+}
+
+function fillDetectionProfileForm() {
+  const profile = getActiveDetectionProfile();
+  els.detectionProfileName.value = profile.name;
+  els.detectionProfileMode.value = profile.mode;
+  els.duplicateSensitivityProfile.value = profile.duplicateSensitivity;
+  els.detectionMaxSide.value = profile.maxSide;
+  els.detectionBgWidth.value = profile.backgroundWidth;
+  els.detectionBgHeight.value = profile.backgroundHeight;
+  els.detectionLargeThreshold.value = profile.largeThreshold;
+  els.detectionLargeMultiple.value = profile.largeMultiple;
+  els.detectionAtlasMultiple.value = profile.atlasMultiple;
+}
+
+function collectDetectionProfileForm() {
+  const current = getActiveDetectionProfile();
+  return normalizeDetectionProfile({
+    ...current,
+    name: els.detectionProfileName.value,
+    mode: els.detectionProfileMode.value,
+    duplicateSensitivity: els.duplicateSensitivityProfile.value,
+    maxSide: els.detectionMaxSide.value,
+    backgroundWidth: els.detectionBgWidth.value,
+    backgroundHeight: els.detectionBgHeight.value,
+    largeThreshold: els.detectionLargeThreshold.value,
+    largeMultiple: els.detectionLargeMultiple.value,
+    atlasMultiple: els.detectionAtlasMultiple.value,
+  });
+}
+
+function updateActiveDetectionProfile(nextProfile, shouldSave) {
+  const index = detectionProfiles.findIndex((profile) => profile.id === activeDetectionProfileId);
+  if (index >= 0) detectionProfiles[index] = normalizeDetectionProfile(nextProfile);
+  if (shouldSave) {
+    saveDetectionProfiles();
+    renderDetectionProfileSelect();
+  }
+}
+
+function createDetectionProfile() {
+  const base = normalizeDetectionProfile(getActiveDetectionProfile());
+  const next = {
+    ...base,
+    id: "detect-" + Date.now(),
+    name: base.name + " 副本",
+  };
+  detectionProfiles.push(next);
+  activeDetectionProfileId = next.id;
+  saveDetectionProfiles();
+  renderDetectionProfileSelect();
+  fillDetectionProfileForm();
+  revalidateDetectionAssets();
+  showToast("已新增检测项目组");
+}
+
+function deleteDetectionProfile() {
+  if (detectionProfiles.length <= 1) {
+    showToast("至少保留一个检测项目组");
+    return;
+  }
+  detectionProfiles = detectionProfiles.filter((profile) => profile.id !== activeDetectionProfileId);
+  activeDetectionProfileId = detectionProfiles[0].id;
+  saveDetectionProfiles();
+  renderDetectionProfileSelect();
+  fillDetectionProfileForm();
+  revalidateDetectionAssets();
+  showToast("已删除检测项目组");
+}
+
+function revalidateDetectionAssets() {
+  const profile = getActiveDetectionProfile();
+  detectionAssets = detectionAssets.map((asset) => ({
+    ...asset,
+    ...validateDetectionDimensions(asset.dimensions, profile),
+  }));
+  updateSimilarResourceWarnings();
+  renderDetectionList();
+}
+
+function syncWorkProjectFields() {
+  const project = getActiveProject();
+  if (els.projectSelect.value !== activeProjectId) els.projectSelect.value = activeProjectId;
+  els.projectConfigName.value = project.name;
+  els.projectConfigDescription.value = project.description || "";
+  els.workBasePrefix.value = getPrefixPresetValue(rules.basePrefix) === "__none" ? "" : getPrefixPresetValue(rules.basePrefix) || defaultRules.basePrefix;
+  els.workProjectName.value = rules.projectName;
+  els.workViewName.value = rules.viewName || "";
+}
+
+function buildPrefix() {
+  const separator = rules.separator || "_";
+  return [sanitizeName(rules.basePrefix), sanitizeName(rules.projectName), sanitizeName(rules.viewName), ""].filter((part, index, array) => part || index === array.length - 1).join(separator);
+}
+
+function updateRulePreview() {
+  els.prefixPreview.textContent = buildPrefix() + "AI自动生成名称";
+}
+
+function updateActiveRuleText() {
+  els.activeRuleText.textContent = "当前规则：" + buildPrefix();
+}
+
+function getPrefixPresetValue(prefix) {
+  if (!sanitizeName(prefix)) return "__none";
+  const presets = ["T_UI", "T_UI_Img", "T_UI_Icon"];
+  return presets.includes(prefix) ? prefix : "";
+}
+
+function parseTags(value) {
+  return parseList(value);
+}
+
+function parseList(value) {
+  return String(value || "")
+    .split(/[\n,，、]/)
+    .map((item) => sanitizeName(item))
+    .filter(Boolean);
+}
+
+function parseFilenameRules(value) {
+  return String(value || "")
+    .split(/\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const parts = line.split("=");
+      return {
+        keyword: sanitizeName(parts[0]),
+        value: sanitizeName(parts.slice(1).join("=") || parts[0]),
+      };
+    })
+    .filter((rule) => rule.keyword && rule.value);
+}
+
+function loadRules() {
+  try {
+    return normalizeLoadedRules({ ...defaultRules, ...JSON.parse(localStorage.getItem(STORAGE_KEY)) });
+  } catch {
+    return { ...defaultRules };
+  }
+}
+
+function saveRules(nextRules) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(nextRules));
+}
+
+function collectAiSettings() {
+  return {
+    provider: els.aiProvider.value || "openai",
+    apiFormat: els.aiApiFormat.value || "responses",
+    baseUrl: normalizeBaseUrl(els.aiBaseUrl.value) || "https://api.openai.com/v1",
+    apiKey: els.openaiApiKey.value.trim(),
+    model: els.openaiModel.value.trim() || "gpt-4.1-mini",
+    providerNote: els.aiProviderNote.value.trim(),
+  };
+}
+
+function loadAiSettings() {
+  try {
+    return normalizeAiSettings({
+      ...readLocalAiConfig(),
+      ...JSON.parse(localStorage.getItem(AI_SETTINGS_KEY)),
+    });
+  } catch {
+    return normalizeAiSettings(readLocalAiConfig());
+  }
+}
+
+function saveAiSettings(nextSettings) {
+  localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(nextSettings));
+}
+
+function collectTranslationSettings() {
+  return normalizeTranslationSettings({
+    provider: els.translatorProvider.value || "local",
+    baiduAppId: els.baiduTranslateAppId.value.trim(),
+    baiduSecret: els.baiduTranslateSecret.value.trim(),
+    baiduEndpoint: normalizeTranslateEndpoint(els.baiduTranslateEndpoint.value),
+  });
+}
+
+function fillTranslationSettings() {
+  els.translatorProvider.value = translationSettings.provider;
+  els.baiduTranslateAppId.value = translationSettings.baiduAppId;
+  els.baiduTranslateSecret.value = translationSettings.baiduSecret;
+  els.baiduTranslateEndpoint.value = translationSettings.baiduEndpoint;
+}
+
+function loadTranslationSettings() {
+  try {
+    const localConfig = readLocalTranslationConfig();
+    const savedConfig = JSON.parse(localStorage.getItem(TRANSLATION_SETTINGS_KEY)) || {};
+    return normalizeTranslationSettings({
+      ...savedConfig,
+      ...localConfig,
+      provider: localConfig.provider || savedConfig.provider,
+      baiduAppId: localConfig.baiduAppId || savedConfig.baiduAppId,
+      baiduSecret: localConfig.baiduSecret || savedConfig.baiduSecret,
+      baiduEndpoint: localConfig.baiduEndpoint || savedConfig.baiduEndpoint,
+    });
+  } catch {
+    return normalizeTranslationSettings(readLocalTranslationConfig());
+  }
+}
+
+function saveTranslationSettings(nextSettings) {
+  localStorage.setItem(TRANSLATION_SETTINGS_KEY, JSON.stringify(nextSettings));
+}
+
+function normalizeTranslationSettings(nextSettings = {}) {
+  nextSettings = nextSettings || {};
+  return {
+    provider: nextSettings.provider === "baidu" ? "baidu" : "local",
+    baiduAppId: nextSettings.baiduAppId || "",
+    baiduSecret: nextSettings.baiduSecret || "",
+    baiduEndpoint: normalizeTranslateEndpoint(nextSettings.baiduEndpoint || "https://fanyi-api.baidu.com/api/trans/vip/translate"),
+  };
+}
+
+function normalizeTranslateEndpoint(value) {
+  return String(value || "").trim().replace(/\/+$/, "") || "https://fanyi-api.baidu.com/api/trans/vip/translate";
+}
+
+function normalizeAiSettings(nextSettings = {}) {
+  return {
+    provider: nextSettings.provider || "openai",
+    apiFormat: nextSettings.apiFormat || "responses",
+    baseUrl: normalizeBaseUrl(nextSettings.baseUrl || "https://api.openai.com/v1"),
+    apiKey: nextSettings.apiKey || "",
+    model: nextSettings.model || "gpt-4.1-mini",
+    providerNote: nextSettings.providerNote || "",
+  };
+}
+
+function readLocalAiConfig() {
+  return window.NGR_LOCAL_AI_CONFIG || {};
+}
+
+function readLocalTranslationConfig() {
+  return window.NGR_LOCAL_TRANSLATION_CONFIG || {};
+}
+
+function loadSchemes() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SCHEME_KEY));
+    if (Array.isArray(saved) && saved.length) return ensureBuiltinSchemes(saved.map((scheme) => normalizeLoadedRules(scheme)));
+  } catch {
+    // Ignore invalid local scheme data and rebuild with the default scheme.
+  }
+  return ensureBuiltinSchemes([normalizeLoadedRules({ ...defaultRules })]);
+}
+
+function saveSchemes(nextSchemes) {
+  localStorage.setItem(SCHEME_KEY, JSON.stringify(nextSchemes));
+}
+
+function loadProjects() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(PROJECTS_KEY));
+    if (Array.isArray(saved) && saved.length) {
+      const savedProjects = normalizeProjects(saved);
+      return savedProjects.length ? savedProjects : normalizeProjects(buildBuiltinProjects());
+    }
+  } catch {
+    // Rebuild projects below.
+  }
+  return normalizeProjects(buildBuiltinProjects());
+}
+
+function getDefaultDetectionProfiles() {
+  return [
+    {
+      id: "ngr-detection",
+      name: "NGR",
+      mode: "ngr",
+      maxSide: 1024,
+      backgroundWidth: 3440,
+      backgroundHeight: 1440,
+      largeThreshold: 512,
+      largeMultiple: 4,
+      atlasMultiple: 2,
+      duplicateSensitivity: "off",
+      duplicateSensitivityMigrated: true,
+    },
+    {
+      id: "more-detection",
+      name: "更多项目组正在开发中",
+      mode: "ngr",
+      maxSide: 1024,
+      backgroundWidth: 3440,
+      backgroundHeight: 1440,
+      largeThreshold: 512,
+      largeMultiple: 4,
+      atlasMultiple: 2,
+      duplicateSensitivity: "off",
+      duplicateSensitivityMigrated: true,
+    },
+  ];
+}
+
+function loadDetectionProfiles() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(DETECTION_PROFILES_KEY));
+    if (Array.isArray(saved) && saved.length) return ensureDefaultDetectionProfiles(saved.map(normalizeDetectionProfile));
+  } catch {
+    // Rebuild below.
+  }
+  return getDefaultDetectionProfiles().map(normalizeDetectionProfile);
+}
+
+function ensureDefaultDetectionProfiles(nextProfiles) {
+  const profiles = nextProfiles.map((profile) => {
+    if (profile.id === "ngr-detection" || profile.name === "NGR切图检测规范") {
+      const shouldMigrateDuplicateDefault = !profile.duplicateSensitivityMigrated && (!profile.duplicateSensitivity || profile.duplicateSensitivity === "low");
+      return {
+        ...profile,
+        id: "ngr-detection",
+        name: "NGR",
+        duplicateSensitivity: shouldMigrateDuplicateDefault ? "off" : profile.duplicateSensitivity,
+        duplicateSensitivityMigrated: true,
+      };
+    }
+    return profile;
+  });
+  getDefaultDetectionProfiles().forEach((defaultProfile) => {
+    if (!profiles.some((profile) => profile.id === defaultProfile.id)) profiles.push(normalizeDetectionProfile(defaultProfile));
+  });
+  return profiles;
+}
+
+function loadActiveDetectionProfileId(nextProfiles) {
+  const saved = localStorage.getItem(ACTIVE_DETECTION_PROFILE_KEY);
+  if (saved && nextProfiles.some((profile) => profile.id === saved)) return saved;
+  return nextProfiles[0].id;
+}
+
+function normalizeDetectionProfile(profile = {}) {
+  const defaults = getDefaultDetectionProfiles()[0];
+  return {
+    id: profile.id || "detect-" + Date.now() + "-" + Math.random().toString(16).slice(2),
+    name: String(profile.name || defaults.name).trim() || defaults.name,
+    mode: ["ngr", "planner", "icon"].includes(profile.mode) ? profile.mode : defaults.mode,
+    duplicateSensitivity: ["off", "low", "medium", "high"].includes(profile.duplicateSensitivity) ? profile.duplicateSensitivity : defaults.duplicateSensitivity,
+    duplicateSensitivityMigrated: profile.duplicateSensitivityMigrated === true,
+    maxSide: toPositiveInt(profile.maxSide, defaults.maxSide),
+    backgroundWidth: toPositiveInt(profile.backgroundWidth, defaults.backgroundWidth),
+    backgroundHeight: toPositiveInt(profile.backgroundHeight, defaults.backgroundHeight),
+    largeThreshold: toPositiveInt(profile.largeThreshold, defaults.largeThreshold),
+    largeMultiple: toPositiveInt(profile.largeMultiple, defaults.largeMultiple),
+    atlasMultiple: toPositiveInt(profile.atlasMultiple, defaults.atlasMultiple),
+  };
+}
+
+function toPositiveInt(value, fallback) {
+  const number = Number.parseInt(value, 10);
+  return Number.isFinite(number) && number > 0 ? number : fallback;
+}
+
+function getActiveDetectionProfile() {
+  return detectionProfiles.find((profile) => profile.id === activeDetectionProfileId) || detectionProfiles[0];
+}
+
+function saveDetectionProfiles() {
+  localStorage.setItem(DETECTION_PROFILES_KEY, JSON.stringify(detectionProfiles));
+  localStorage.setItem(ACTIVE_DETECTION_PROFILE_KEY, activeDetectionProfileId);
+}
+
+function normalizeProjects(nextProjects) {
+  return nextProjects
+    .filter((project) => project && project.id !== "default" && project.name !== "默认项目")
+    .map((project, index) => {
+      const schemesForProject = normalizeProjectSchemes(project.name, (project.schemes || []).map((scheme) => normalizeLoadedRules(scheme)));
+      const activeSchemeName = schemesForProject.some((scheme) => scheme.schemeName === project.activeSchemeName) ? project.activeSchemeName : schemesForProject[0].schemeName;
+      return enrichProjectWithTraining({
+        id: project.id || "project-" + index + "-" + Date.now(),
+        name: project.name || "未命名项目",
+        description: project.description || "",
+        activeSchemeName,
+        trainingVersion: project.trainingVersion || 0,
+        schemes: schemesForProject,
+      });
+    });
+}
+
+function enrichProjectWithTraining(project) {
+  if (isYyslsProject(project)) return enrichYyslsProject(project);
+  if (!isNgrProject(project)) return project;
+  if (project.trainingVersion >= NGR_TRAINING_VERSION && isExactNgrTemplateProject(project)) return project;
+  const activeSchemeName = ngrTemplateSchemeNames.includes(project.activeSchemeName) ? project.activeSchemeName : "NGR图集命名规范";
+  return {
+    ...project,
+    activeSchemeName,
+    trainingVersion: NGR_TRAINING_VERSION,
+    schemes: getNgrTemplateSchemes(),
+  };
+}
+
+function isNgrProject(project) {
+  return project.id === "ngr" || /NGR/i.test(project.name || "");
+}
+
+function isYyslsProject(project) {
+  return project.id === "yysls" || /yysls|燕云|十六声/i.test(project.name || "");
+}
+
+function enrichYyslsProject(project) {
+  if (project.trainingVersion >= YYSLS_TRAINING_VERSION) return project;
+  return {
+    ...project,
+    trainingVersion: YYSLS_TRAINING_VERSION,
+    schemes: project.schemes.map(enrichSchemeWithYyslsTraining),
+  };
+}
+
+function isExactNgrTemplateProject(project) {
+  const schemeNames = (project.schemes || []).map((scheme) => scheme.schemeName);
+  return schemeNames.length === ngrTemplateSchemeNames.length && ngrTemplateSchemeNames.every((name) => schemeNames.includes(name));
+}
+
+function getNgrTemplateSchemes() {
+  return ngrTemplateSchemes.map((scheme) => normalizeLoadedRules({ ...scheme }));
+}
+
+function enrichSchemeWithNgrTraining(scheme) {
+  return normalizeLoadedRules({
+    ...scheme,
+    tags: mergeListText(scheme.tags, "Line, Bar, ProgressBar, Frame, Mask, Light, Pattern, Tab, Card, Selected, Forbidden, Lock, Unlock"),
+    pageTerms: removeLineText(scheme.pageTerms, ngrTrainingKnowledge.projectTerms.join("\n")),
+    componentTerms: mergeLineText(scheme.componentTerms, ngrTrainingKnowledge.componentTerms),
+    stateTerms: mergeLineText(scheme.stateTerms, ngrTrainingKnowledge.stateTerms),
+    filenameRules: removeRuleText(mergeRuleText(scheme.filenameRules, ngrTrainingKnowledge.filenameRules), ngrTrainingKnowledge.projectTerms.join("\n")),
+    contextDocs: mergeContextText(scheme.contextDocs, ngrTrainingKnowledge.contextDocs),
+  });
+}
+
+function enrichSchemeWithYyslsTraining(scheme) {
+  return normalizeLoadedRules({
+    ...scheme,
+    tags: mergeListText(scheme.tags, yyslsTrainingKnowledge.tags),
+    pageTerms: mergeLineText(scheme.pageTerms, yyslsTrainingKnowledge.pageTerms),
+    componentTerms: mergeLineText(scheme.componentTerms, yyslsTrainingKnowledge.componentTerms),
+    stateTerms: mergeLineText(scheme.stateTerms, yyslsTrainingKnowledge.stateTerms),
+    filenameRules: mergeRuleText(scheme.filenameRules, yyslsTrainingKnowledge.filenameRules),
+    contextDocs: mergeContextText(scheme.contextDocs, yyslsTrainingKnowledge.contextDocs),
+  });
+}
+
+function mergeLineText(currentText, incomingText) {
+  const lines = [];
+  const seen = new Set();
+  String(currentText || "")
+    .split(/\n/)
+    .concat(String(incomingText || "").split(/\n/))
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .forEach((line) => {
+      const key = line.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      lines.push(line);
+    });
+  return lines.join("\n");
+}
+
+function mergeListText(currentText, incomingText) {
+  const items = [];
+  const seen = new Set();
+  String(currentText || "")
+    .split(/[\n,，、]/)
+    .concat(String(incomingText || "").split(/[\n,，、]/))
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .forEach((item) => {
+      const key = item.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      items.push(item);
+    });
+  return items.join(", ");
+}
+
+function removeLineText(currentText, removeText) {
+  const blocked = new Set(String(removeText || "").split(/\n/).map((line) => line.trim().toLowerCase()).filter(Boolean));
+  return String(currentText || "")
+    .split(/\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !blocked.has(line.toLowerCase()))
+    .join("\n");
+}
+
+function removeRuleText(currentText, removeText) {
+  const blocked = new Set(String(removeText || "").split(/\n/).map((line) => line.trim().toLowerCase()).filter(Boolean));
+  return String(currentText || "")
+    .split(/\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !blocked.has(line.split("=")[0].trim().toLowerCase()))
+    .join("\n");
+}
+
+function mergeContextText(currentText, incomingText) {
+  const current = String(currentText || "").trim();
+  const incoming = String(incomingText || "").trim();
+  if (!current) return incoming;
+  if (current.includes("命名结构固定为：T_UI_用户填写工程名_AI生成语义名")) return current;
+  return current + "\n\n" + incoming;
+}
+
+function normalizeProjectSchemes(projectName, nextSchemes) {
+  const defaultProjectName = getDefaultProjectName(projectName);
+  const projectSchemes = nextSchemes.length ? nextSchemes : [normalizeLoadedRules({ ...defaultRules, projectName: defaultProjectName })];
+  return projectSchemes.map((scheme) => ({
+    ...scheme,
+    projectName: scheme.projectName === defaultRules.projectName ? defaultProjectName : scheme.projectName,
+  }));
+}
+
+function getDefaultProjectName(projectName) {
+  if (projectName.includes("NGR")) return "NGR";
+  if (projectName.includes("yysls")) return "yysls";
+  if (projectName.includes("更多")) return "More";
+  return sanitizeName(projectName) || defaultRules.projectName;
+}
+
+function buildBuiltinProjects() {
+  return [
+    {
+      id: "ngr",
+      name: "NGR",
+      description: "NGR 项目",
+      activeSchemeName: "NGR图集命名规范",
+      trainingVersion: NGR_TRAINING_VERSION,
+      schemes: getNgrTemplateSchemes(),
+    },
+    {
+      id: "yysls",
+      name: "yysls",
+      description: "yysls 项目",
+      activeSchemeName: "yysls命名规范",
+      trainingVersion: YYSLS_TRAINING_VERSION,
+      schemes: [
+        builtinSchemes[1],
+        { ...builtinSchemes[1], schemeName: "yysls拼音混合规范", contextDocs: builtinSchemes[1].contextDocs + "\n优先保留历史拼音词，例如 nielian、jianbian、huawen、zhuangshi、xuanze、yulan。" },
+        { ...builtinSchemes[1], schemeName: "yysls通用UI规范", contextDocs: builtinSchemes[1].contextDocs + "\n适合通用 UI 切图，仍需保持全小写 snake_case 和短词/拼音习惯。" },
+      ],
+    },
+    {
+      id: "more",
+      name: "更多项目正在持续开发中",
+      description: "更多项目正在持续开发中",
+      activeSchemeName: "更多项目正在持续开发中",
+      schemes: [builtinSchemes[2]],
+    },
+  ];
+}
+
+function loadActiveProjectId(nextProjects) {
+  const saved = localStorage.getItem(ACTIVE_PROJECT_KEY);
+  if (saved && saved !== "default" && nextProjects.some((project) => project.id === saved)) return saved;
+  const ngrProject = nextProjects.find((project) => project.id === "ngr" || project.name === "NGR");
+  return ngrProject ? ngrProject.id : nextProjects[0].id;
+}
+
+function getActiveProject() {
+  return projects.find((project) => project.id === activeProjectId) || projects[0];
+}
+
+function getProjectActiveScheme(project) {
+  return project.schemes.find((scheme) => scheme.schemeName === project.activeSchemeName) || project.schemes[0] || normalizeLoadedRules({ ...defaultRules });
+}
+
+function saveProjects() {
+  const project = getActiveProject();
+  project.schemes = schemes;
+  project.activeSchemeName = rules.schemeName;
+  localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
+  localStorage.setItem(ACTIVE_PROJECT_KEY, activeProjectId);
+}
+
+function ensureBuiltinSchemes(nextSchemes) {
+  const merged = [...nextSchemes];
+  builtinSchemes.forEach((scheme) => {
+    if (!merged.some((item) => item.schemeName === scheme.schemeName)) {
+      merged.push(normalizeLoadedRules(scheme));
+    }
+  });
+  return merged;
+}
+
+function upsertScheme(nextRules, shouldSave = true) {
+  const clean = normalizeLoadedRules({
+    ...defaultRules,
+    ...nextRules,
+    schemeName: nextRules.schemeName || defaultRules.schemeName,
+  });
+  const index = schemes.findIndex((scheme) => scheme.schemeName === clean.schemeName);
+  if (index >= 0) {
+    schemes[index] = clean;
+  } else {
+    schemes.push(clean);
+  }
+  schemes.sort((a, b) => a.schemeName.localeCompare(b.schemeName, "zh-Hans-CN"));
+  const project = getActiveProject();
+  project.schemes = schemes;
+  project.activeSchemeName = clean.schemeName;
+  if (shouldSave) saveProjects();
+}
+
+function normalizeLoadedRules(nextRules) {
+  const merged = { ...defaultRules, ...nextRules };
+  merged.filenameRules = mergeRuleText(defaultRules.filenameRules, merged.filenameRules);
+  merged.filenameRules = enforceNamingRuleAliases(merged.filenameRules);
+  return merged;
+}
+
+function enforceNamingRuleAliases(ruleText) {
+  const overrides = {
+    bg: "BG",
+    background: "BG",
+    backgrounds: "BG",
+    reward: "Rewards",
+    rewards: "Rewards",
+    gloryreward: "GloryRewards",
+    gloryrewards: "GloryRewards",
+    "底": "BG",
+    "背景图": "BG",
+  };
+  return String(ruleText || "")
+    .split("\n")
+    .map((line) => {
+      const parts = line.split("=");
+      const keyword = parts[0]?.trim();
+      if (!keyword) return "";
+      const key = keyword.toLowerCase();
+      const value = overrides[key] || overrides[keyword] || parts.slice(1).join("=").trim() || keyword;
+      return keyword + "=" + value;
+    })
+    .filter(Boolean)
+    .join("\n");
+}
+
+function mergeRuleText(defaultText, savedText) {
+  const savedLines = String(savedText || "").split("\n").filter(Boolean);
+  const savedKeys = new Set(savedLines.map((line) => line.split("=")[0].trim().toLowerCase()));
+  const missingDefaults = String(defaultText || "")
+    .split("\n")
+    .filter(Boolean)
+    .filter((line) => !savedKeys.has(line.split("=")[0].trim().toLowerCase()));
+  return [...savedLines, ...missingDefaults].join("\n");
+}
