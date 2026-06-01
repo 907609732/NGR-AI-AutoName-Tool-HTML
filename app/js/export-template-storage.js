@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.4 module: export-template-storage.js */
+/* NGRAI AutoName Tool V2.5 module: export-template-storage.js */
 async function exportRenamedFiles() {
   if (!assets.length) {
     showToast("没有可导出的图片");
