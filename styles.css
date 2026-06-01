@@ -835,8 +835,11 @@ button:disabled {
   border-top: 1px solid var(--line);
 }
 
+.naming-batch-tools {
+  grid-template-columns: minmax(120px, 0.7fr) minmax(170px, 1fr) minmax(150px, 0.9fr) minmax(210px, 0.95fr) minmax(170px, 0.75fr) minmax(160px, 0.8fr) minmax(150px, 0.7fr) minmax(160px, 0.75fr) minmax(150px, 0.75fr);
+}
+
 .suffix-apply-field {
-  grid-column: span 2;
   min-width: 0;
 }
 
@@ -847,7 +850,7 @@ button:disabled {
 
 .suffix-apply-group {
   display: grid;
-  grid-template-columns: minmax(80px, 1fr) auto;
+  grid-template-columns: minmax(64px, 1fr) auto;
   align-items: stretch;
   min-width: 0;
 }
@@ -858,8 +861,8 @@ button:disabled {
 }
 
 .suffix-apply-group .ghost-action {
-  min-width: 96px;
-  padding: 0 10px;
+  min-width: 52px;
+  padding: 0 8px;
   border-left: 0;
   border-radius: 0 8px 8px 0;
   background: #f8fbfc;
@@ -1086,15 +1089,15 @@ button:disabled {
 
 .inline-name-row {
   display: grid;
-  grid-template-columns: minmax(130px, 0.6fr) minmax(130px, 0.6fr) minmax(130px, 0.6fr) minmax(240px, 1.2fr);
+  grid-template-columns: minmax(170px, 0.95fr) minmax(170px, 0.95fr) minmax(170px, 0.95fr) minmax(220px, 0.8fr);
   gap: 8px;
   min-width: 0;
 }
 
 .inline-prefix {
   display: grid;
-  grid-template-columns: 72px minmax(0, 1fr);
-  gap: 8px;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px;
   align-items: center;
   padding: 7px 8px;
   border-radius: 8px;
@@ -1230,8 +1233,8 @@ button:disabled {
 
 .inline-final-name {
   display: grid;
-  grid-template-columns: 72px minmax(0, 1fr);
-  gap: 8px;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px;
   align-items: center;
   padding: 7px 8px;
   border-radius: 8px;
@@ -1272,7 +1275,7 @@ button:disabled {
 }
 
 .compact-list-mode .inline-name-row {
-  grid-template-columns: minmax(120px, 0.55fr) minmax(120px, 0.55fr) minmax(120px, 0.55fr) minmax(220px, 1.35fr);
+  grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr) minmax(150px, 1fr) minmax(180px, 0.75fr);
 }
 
 .compact-list-mode .inline-prefix,
@@ -1511,5 +1514,11 @@ button:disabled {
 
   .asset-item input[type="checkbox"] {
     margin-top: 0;
+  }
+}
+
+@media (max-width: 1500px) {
+  .naming-batch-tools {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   }
 }
