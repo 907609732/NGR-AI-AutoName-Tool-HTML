@@ -554,8 +554,9 @@ function bindRules() {
 
   els.prefixPreset.addEventListener("change", () => {
     if (!els.prefixPreset.value) return;
-    els.basePrefix.value = els.prefixPreset.value;
-    els.workBasePrefix.value = els.prefixPreset.value;
+    const prefixValue = els.prefixPreset.value === "__none" ? "" : els.prefixPreset.value;
+    els.basePrefix.value = prefixValue;
+    els.workBasePrefix.value = prefixValue;
     rules = collectRulesForm();
     saveRules(rules);
     updateRulePreview();
@@ -564,7 +565,7 @@ function bindRules() {
   });
 
   els.workBasePrefix.addEventListener("change", () => {
-    rules.basePrefix = els.workBasePrefix.value || defaultRules.basePrefix;
+    rules.basePrefix = els.workBasePrefix.value;
     els.basePrefix.value = rules.basePrefix;
     els.prefixPreset.value = getPrefixPresetValue(rules.basePrefix);
     saveRules(rules);
@@ -1987,16 +1988,21 @@ function renderAssetList() {
     const prefixLabel = document.createElement("span");
     prefixLabel.textContent = "前缀名";
     const prefixInput = document.createElement("select");
-    ["T_UI", "T_UI_Img", "T_UI_Icon"].forEach((value) => {
+    [
+      { value: "", label: "无" },
+      { value: "T_UI", label: "T_UI" },
+      { value: "T_UI_Img", label: "T_UI_Img" },
+      { value: "T_UI_Icon", label: "T_UI_Icon" },
+    ].forEach((item) => {
       const option = document.createElement("option");
-      option.value = value;
-      option.textContent = value;
-      option.selected = value === buildAssetBasePrefix(asset);
+      option.value = item.value;
+      option.textContent = item.label;
+      option.selected = item.value === buildAssetBasePrefix(asset);
       prefixInput.appendChild(option);
     });
     prefixInput.addEventListener("change", () => {
       asset.customPrefix = "";
-      asset.customBasePrefix = prefixInput.value;
+      asset.customBasePrefix = prefixInput.value === "" ? "__none" : prefixInput.value;
       afterName.querySelector("strong").textContent = asset.finalBaseName ? buildExportName(asset) : "待命名";
     });
     prefix.append(prefixLabel, prefixInput);
@@ -2882,8 +2888,10 @@ function buildAssetPrefix(asset) {
 }
 
 function buildAssetBasePrefix(asset) {
-  const prefix = sanitizeName(asset?.customBasePrefix || rules.basePrefix || defaultRules.basePrefix);
-  return ["T_UI", "T_UI_Img", "T_UI_Icon"].includes(prefix) ? prefix : defaultRules.basePrefix;
+  if (asset?.customBasePrefix === "__none") return "";
+  const rawPrefix = asset?.customBasePrefix !== "" && asset?.customBasePrefix != null ? asset.customBasePrefix : rules.basePrefix;
+  const prefix = sanitizeName(rawPrefix || "");
+  return ["", "T_UI", "T_UI_Img", "T_UI_Icon"].includes(prefix) ? prefix : defaultRules.basePrefix;
 }
 
 function buildAssetProjectName(asset) {
@@ -2902,7 +2910,7 @@ function getExtension(name) {
 function collectRulesForm() {
   return {
     schemeName: els.schemeName.value.trim() || defaultRules.schemeName,
-    basePrefix: sanitizeName(els.workBasePrefix.value || els.basePrefix.value) || defaultRules.basePrefix,
+    basePrefix: sanitizeName(els.workBasePrefix.value || els.basePrefix.value),
     projectName: sanitizeName(els.workProjectName.value || els.projectName.value) || defaultRules.projectName,
     viewName: sanitizeName(els.workViewName.value),
     separator: els.separator.value || defaultRules.separator,
@@ -2921,7 +2929,7 @@ function fillRulesForm() {
   els.projectConfigDescription.value = project.description || "";
   els.schemeName.value = rules.schemeName;
   els.basePrefix.value = rules.basePrefix;
-  els.workBasePrefix.value = getPrefixPresetValue(rules.basePrefix) || defaultRules.basePrefix;
+  els.workBasePrefix.value = getPrefixPresetValue(rules.basePrefix) === "__none" ? "" : getPrefixPresetValue(rules.basePrefix) || defaultRules.basePrefix;
   els.prefixPreset.value = getPrefixPresetValue(rules.basePrefix);
   els.projectName.value = rules.projectName;
   els.workProjectName.value = rules.projectName;
@@ -3315,7 +3323,7 @@ function syncWorkProjectFields() {
   if (els.projectSelect.value !== activeProjectId) els.projectSelect.value = activeProjectId;
   els.projectConfigName.value = project.name;
   els.projectConfigDescription.value = project.description || "";
-  els.workBasePrefix.value = getPrefixPresetValue(rules.basePrefix) || defaultRules.basePrefix;
+  els.workBasePrefix.value = getPrefixPresetValue(rules.basePrefix) === "__none" ? "" : getPrefixPresetValue(rules.basePrefix) || defaultRules.basePrefix;
   els.workProjectName.value = rules.projectName;
   els.workViewName.value = rules.viewName || "";
 }
@@ -3334,6 +3342,7 @@ function updateActiveRuleText() {
 }
 
 function getPrefixPresetValue(prefix) {
+  if (!sanitizeName(prefix)) return "__none";
   const presets = ["T_UI", "T_UI_Img", "T_UI_Icon"];
   return presets.includes(prefix) ? prefix : "";
 }
