@@ -3432,11 +3432,12 @@ function loadTranslationSettings() {
     const localConfig = readLocalTranslationConfig();
     const savedConfig = JSON.parse(localStorage.getItem(TRANSLATION_SETTINGS_KEY)) || {};
     return normalizeTranslationSettings({
-      ...localConfig,
       ...savedConfig,
-      baiduAppId: savedConfig.baiduAppId || localConfig.baiduAppId,
-      baiduSecret: savedConfig.baiduSecret || localConfig.baiduSecret,
-      baiduEndpoint: savedConfig.baiduEndpoint || localConfig.baiduEndpoint,
+      ...localConfig,
+      provider: localConfig.provider || savedConfig.provider,
+      baiduAppId: localConfig.baiduAppId || savedConfig.baiduAppId,
+      baiduSecret: localConfig.baiduSecret || savedConfig.baiduSecret,
+      baiduEndpoint: localConfig.baiduEndpoint || savedConfig.baiduEndpoint,
     });
   } catch {
     return normalizeTranslationSettings(readLocalTranslationConfig());
