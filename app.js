@@ -3429,9 +3429,17 @@ function fillTranslationSettings() {
 
 function loadTranslationSettings() {
   try {
-    return normalizeTranslationSettings(JSON.parse(localStorage.getItem(TRANSLATION_SETTINGS_KEY)));
+    const localConfig = readLocalTranslationConfig();
+    const savedConfig = JSON.parse(localStorage.getItem(TRANSLATION_SETTINGS_KEY)) || {};
+    return normalizeTranslationSettings({
+      ...localConfig,
+      ...savedConfig,
+      baiduAppId: savedConfig.baiduAppId || localConfig.baiduAppId,
+      baiduSecret: savedConfig.baiduSecret || localConfig.baiduSecret,
+      baiduEndpoint: savedConfig.baiduEndpoint || localConfig.baiduEndpoint,
+    });
   } catch {
-    return normalizeTranslationSettings();
+    return normalizeTranslationSettings(readLocalTranslationConfig());
   }
 }
 
@@ -3466,6 +3474,10 @@ function normalizeAiSettings(nextSettings = {}) {
 
 function readLocalAiConfig() {
   return window.NGR_LOCAL_AI_CONFIG || {};
+}
+
+function readLocalTranslationConfig() {
+  return window.NGR_LOCAL_TRANSLATION_CONFIG || {};
 }
 
 function loadSchemes() {
