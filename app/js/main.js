@@ -1,3 +1,3 @@
-/* NGRAI AutoName Tool V2.5 module: main.js */
+/* NGRAI AutoName Tool V2.6 module: main.js */
 bootstrapState();
 init();

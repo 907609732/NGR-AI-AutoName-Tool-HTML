@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.5 module: toast.js */
+/* NGRAI AutoName Tool V2.6 module: toast.js */
 function showToast(message) {
   window.clearTimeout(toastTimer);
   els.toast.textContent = message;

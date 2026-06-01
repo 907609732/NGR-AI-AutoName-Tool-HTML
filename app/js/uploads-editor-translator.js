@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.5 module: uploads-editor-translator.js */
+/* NGRAI AutoName Tool V2.6 module: uploads-editor-translator.js */
 function bindUploads() {
   els.folderInput.addEventListener("change", (event) => addFiles([...event.target.files]));
   els.singleInput.addEventListener("change", (event) => addFiles([...event.target.files]));
@@ -131,26 +131,18 @@ function bindTranslator() {
 }
 
 async function translateToNamingWord(source) {
-  const localName = cleanNamingName(translateFilename(source, parseKnowledge()));
-  if (translationSettings.provider !== "baidu") return localName;
-  try {
-    const apiText = await translateTextByApi(source, "zh", "en");
-    const apiName = cleanNamingName(String(apiText || "").replace(/([a-z])([A-Z])/g, "$1_$2").replace(/[^A-Za-z0-9_]+/g, "_"));
-    return apiName || localName;
-  } catch (error) {
-    return localName || "";
-  }
+  return translateFilenameSmart(source, parseKnowledge());
 }
 
 async function explainNameWithTranslation(name) {
   const localMeaning = explainEnglishName(name);
-  if (translationSettings.provider !== "baidu") return localMeaning;
+  if (translationSettings.provider === "local") return localMeaning;
   try {
     const readable = cleanNamingName(name).replace(/_/g, " ");
-    const apiText = await translateTextByApi(readable, "en", "zh");
+    const apiText = translationSettings.provider === "baidu" ? await translateTextByApi(readable, "en", "zh") : "";
     return apiText || localMeaning;
   } catch (error) {
-    return localMeaning + "\n提示：百度翻译 API 调用失败，已使用本地词库解释。";
+    return localMeaning + "\n提示：翻译 API 调用失败，已使用本地词库解释。";
   }
 }
 
@@ -158,18 +150,18 @@ async function testTranslationSettings() {
   translationSettings = collectTranslationSettings();
   saveTranslationSettings(translationSettings);
   els.translatorOutput.textContent = "正在测试翻译 API...";
-  if (translationSettings.provider !== "baidu") {
+  if (translationSettings.provider === "local") {
     els.translatorOutput.textContent = "当前使用本地词库，不需要测试 API。";
     showToast("当前使用本地词库");
     return;
   }
   try {
-    const result = await translateTextByApi("测试", "zh", "en");
+    const result = translationSettings.provider === "baidu" ? await translateTextByApi("测试", "zh", "en") : await translateTextByModel("测试");
     els.translatorOutput.textContent = "测试成功：测试 -> " + result;
-    showToast("百度翻译 API 测试成功");
+    showToast("翻译 API 测试成功");
   } catch (error) {
     els.translatorOutput.textContent = "测试失败：" + error.message;
-    showToast("百度翻译 API 测试失败");
+    showToast("翻译 API 测试失败");
   }
 }
 

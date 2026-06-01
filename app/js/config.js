@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.5 module: config.js */
+/* NGRAI AutoName Tool V2.6 module: config.js */
 const STORAGE_KEY = "ngr-ai-autoname-rules";
 const SCHEME_KEY = "ngr-ai-autoname-rule-schemes";
 const PROJECTS_KEY = "ngr-ai-autoname-projects";
@@ -15,12 +15,12 @@ const UPLOAD_CONCURRENCY = 4;
 const ASSET_RENDER_BATCH_SIZE = 120;
 const DETECTION_RENDER_BATCH_SIZE = 160;
 const MAX_DUPLICATE_SCAN_ASSETS = 600;
-const NGR_TRAINING_VERSION = 6;
+const NGR_TRAINING_VERSION = 7;
 const YYSLS_TRAINING_VERSION = 1;
 const FORBIDDEN_NAMING_TERMS = ["module", "modules"];
 const lexiconCategories = [
   { title: "状态", terms: ["Normal", "Nml", "Default", "Hover", "Pressed", "Down", "Active", "Selected", "Sel", "Unselected", "UnSel", "Disabled", "Forbidden", "Lock", "Unlock", "Open", "Close", "On", "Off", "Check", "Checked", "Focus", "New", "Hot"] },
-  { title: "类型", terms: ["BG", "MainBG", "PanelBG", "IconBG", "Button", "Btn", "Icon", "Line", "Divider", "Bar", "ProgressBar", "Frame", "Mask", "Card", "Tab", "Panel", "Popup", "Dialog", "Window", "Item", "Slot", "Cell", "Title", "Text", "Number"] },
+  { title: "类型", terms: ["BG", "MainBG", "PanelBG", "IconBG", "Button", "Btn", "Go", "Icon", "Line", "Divider", "Bar", "ProgressBar", "Frame", "Mask", "Card", "Tab", "Panel", "Popup", "Dialog", "Window", "Item", "Slot", "Cell", "Title", "Text", "Number"] },
   { title: "装饰", terms: ["Light", "Shadow", "Pattern", "Ornament", "Deco", "Glow", "Spark", "Ribbon", "Border", "Corner", "Circle", "Bubble", "Point", "Arrow", "Star", "Dot", "Wave", "Cloud", "Flame", "Halo"] },
   { title: "内容", terms: ["Illustration", "Character", "Weapon", "Rewards", "Gift", "Badge", "Logo", "Avatar", "Portrait", "Shop", "Task", "Quest", "Map", "Skill", "Rank", "Record", "Journal", "Mail", "Bag", "Coin", "Gold", "Diamond"] },
   { title: "布局", terms: ["Header", "Footer", "Content", "List", "Grid", "Menu", "Nav", "Sidebar", "Toolbar", "Tips", "Toast", "Notice", "Tag", "Label", "Input", "Slider", "Switch"] },
@@ -36,9 +36,9 @@ const defaultRules = {
   separator: "_",
   tags: "BG, Button, Hover, Normal, Icon, Item, Frame, Mask, Panel, Title, Line, ProgressBar, Selected, Disabled",
   pageTerms: "Home\nLogin\nProfile\nSettings",
-  componentTerms: "BG\nMainBG\nPanelBG\nIconBG\nButton\nBtn\nIcon\nBanner\nNav\nMenu\nItem\nSlot\nCell\nFrame\nMask\nPanel\nPopup\nDialog\nWindow\nCard\nLine\nDivider\nBar\nProgressBar\nTitle\nText\nNumber\nArrow\nPoint\nBadge\nLogo\nAvatar\nPortrait\nRewards\nGift\nCoin\nGold\nDiamond\nTask\nQuest\nMail\nBag\nShop\nMap\nSkill\nRank\nTips\nToast\nNotice\nTag\nLabel\nInput\nSlider\nSwitch",
+  componentTerms: "BG\nMainBG\nPanelBG\nIconBG\nButton\nBtn\nGo\nIcon\nBanner\nNav\nMenu\nItem\nSlot\nCell\nFrame\nMask\nPanel\nPopup\nDialog\nWindow\nCard\nLine\nDivider\nBar\nProgressBar\nTitle\nText\nNumber\nArrow\nPoint\nBadge\nLogo\nAvatar\nPortrait\nRewards\nGift\nCoin\nGold\nDiamond\nTask\nQuest\nMail\nBag\nShop\nMap\nSkill\nRank\nTips\nToast\nNotice\nTag\nLabel\nInput\nSlider\nSwitch\nOrnament\nDeco",
   stateTerms: "Normal\nNml\nDefault\nHover\nPressed\nDown\nActive\nSelected\nSel\nUnselected\nUnSel\nDisabled\nForbidden\nLock\nUnlock\nOpen\nClose\nOn\nOff\nCheck\nChecked\nFocus\nNew\nHot",
-  filenameRules: "首页=Home\n主页=Home\n主界面=Home\n登录=Login\n登陆=Login\n个人中心=Profile\n我的=Profile\n设置=Settings\n背景=BG\n底图=BG\n底=BG\n背景图=BG\n主背景=MainBG\n面板背景=PanelBG\n图标底=IconBG\n按钮=Button\n按键=Button\n图标=Icon\n导航=Nav\n菜单=Menu\n横幅=Banner\n模块=Item\n条目=Item\n格子=Slot\n槽位=Slot\n单元格=Cell\n奖励=Rewards\n礼物=Gift\n金币=Gold\n货币=Coin\n钻石=Diamond\n任务=Task\n任务栏=Task\n邮件=Mail\n背包=Bag\n商店=Shop\n地图=Map\n技能=Skill\n排行=Rank\n排名=Rank\n提示=Tips\n公告=Notice\n标签=Tag\n输入框=Input\n滑条=Slider\n开关=Switch\n弹窗=Popup\n弹框=Popup\n对话框=Dialog\n窗口=Window\n面板=Panel\n卡片=Card\n边框=Frame\n框=Frame\n遮罩=Mask\n线=Line\n线条=Line\n分割线=Divider\n进度=ProgressBar\n进度条=ProgressBar\n光效=Light\n光=Light\n阴影=Shadow\n纹理=Pattern\n装饰=Deco\n角标=Badge\n头像=Avatar\n头像框=Avatar_Frame\n立绘=Portrait\n常态=Normal\n普通=Normal\n默认=Normal\n悬浮=Hover\n按下=Pressed\n按压=Pressed\n选中=Selected\n未选中=Unselected\n点击=Active\n激活=Active\n禁用=Disabled\n不可用=Disabled\n锁定=Lock\n解锁=Unlock\n打开=Open\n关闭=Close\n开启=On\n勾选=Checked\n焦点=Focus\n新增=New\n热门=Hot\n左=Left\n右=Right\n上=Top\n下=Bottom\n中=Center\n横向=Horizontal\n竖向=Vertical\n红=Red\n蓝=Blue\n黄=Yellow\n绿=Green\n黑=Black\n白=White\n金=Gold\n紫=Purple\n橙=Orange\n灰=Gray\n亮=Light\n暗=Dark\nbg=BG\nbackground=BG\nBackground=BG\nReward=Rewards\nRewards=Rewards\nbtn=Button\nbutton=Button\nicon=Icon\nhover=Hover\nactive=Active\ndisabled=Disabled\nhome=Home\nlogin=Login\nuser=Profile",
+  filenameRules: "首页=Home\n主页=Home\n主界面=Home\n登录=Login\n登陆=Login\n个人中心=Profile\n我的=Profile\n设置=Settings\n背景=BG\n底图=BG\n底=BG\n背景图=BG\n主背景=MainBG\n面板背景=PanelBG\n图标底=IconBG\n前往按钮=Go_Button\n前往=Go\n按钮=Button\n按键=Button\n图标=Icon\n导航=Nav\n菜单=Menu\n横幅=Banner\n模块=Item\n条目=Item\n格子=Slot\n槽位=Slot\n单元格=Cell\n奖励=Rewards\n礼物=Gift\n金币=Gold\n货币=Coin\n钻石=Diamond\n任务=Task\n任务栏=Task\n邮件=Mail\n背包=Bag\n商店=Shop\n地图=Map\n技能=Skill\n排行=Rank\n排名=Rank\n提示=Tips\n公告=Notice\n标签=Tag\n输入框=Input\n滑条=Slider\n开关=Switch\n弹窗=Popup\n弹框=Popup\n对话框=Dialog\n窗口=Window\n面板=Panel\n卡带=Card\n卡片=Card\n卡=Card\n边框=Frame\n框=Frame\n遮罩=Mask\n线=Line\n线条=Line\n分割线=Divider\n进度=ProgressBar\n进度条=ProgressBar\n光效=Light\n光=Light\n阴影=Shadow\n纹理=Pattern\n装饰品=Ornament\n装饰=Deco\n角标=Badge\n头像=Avatar\n头像框=Avatar_Frame\n立绘=Portrait\n常态=Normal\n普通=Normal\n默认=Normal\n悬浮=Hover\n按下=Pressed\n按压=Pressed\n选中=Selected\n未选中=Unselected\n点击=Active\n激活=Active\n禁用=Disabled\n不可用=Disabled\n锁定=Lock\n解锁=Unlock\n打开=Open\n关闭=Close\n开启=On\n勾选=Checked\n焦点=Focus\n新增=New\n热门=Hot\n左上角=TopLeft\n右上角=TopRight\n左下角=BottomLeft\n右下角=BottomRight\n左上=TopLeft\n右上=TopRight\n左下=BottomLeft\n右下=BottomRight\n左=Left\n右=Right\n上=Top\n下=Bottom\n中=Center\n横向=Horizontal\n竖向=Vertical\n红=Red\n蓝=Blue\n黄=Yellow\n绿=Green\n黑=Black\n白=White\n金=Gold\n紫=Purple\n橙=Orange\n灰=Gray\n亮=Light\n暗=Dark\nbg=BG\nbackground=BG\nBackground=BG\nReward=Rewards\nRewards=Rewards\nbtn=Button\nbutton=Button\nicon=Icon\nhover=Hover\nactive=Active\ndisabled=Disabled\nhome=Home\nlogin=Login\nuser=Profile",
   contextDocs: "",
 };
 
@@ -128,14 +128,14 @@ const ngrTrainingKnowledge = {
     "PVPBRTopLog", "EquipmentMake", "ActivityCharacterChallenge", "ItemNotice"
   ],
   componentTerms: [
-    "BG", "Bg", "Button", "Btn", "Icon", "Banner", "Nav", "Item", "Line", "Bar", "ProgressBar", "Frame", "Mask", "Light",
+    "BG", "Bg", "Button", "Btn", "Go", "Icon", "Banner", "Nav", "Item", "Line", "Bar", "ProgressBar", "Frame", "Mask", "Light",
     "Pattern", "Tab", "Card", "Item", "Panel", "Container", "Arrow", "Sprite", "Title", "Text", "Txt", "Number", "Num", "Point",
     "Circle", "Bubble", "Logo", "Tag", "Lock", "Unlock", "Popup", "Toast", "Broadcast", "Recommend", "Rewards", "GloryRewards", "Guide",
     "GuideKey", "Key", "Map", "Skill", "SkillBg", "HeadBg", "TitleBg", "MainBg", "IconBg", "AvatarMask", "Progress", "Quality",
     "Settlement", "Ranking", "Challenge", "InvitationNotice", "Airdrop", "ShadowTrial", "Resonance", "DailyFreeGiftPack", "NPC", "Gold",
     "Switch", "UpGrade", "Vegetable", "Badge", "Loading", "PlayerPet", "Task", "Game", "Inscription", "Level", "Box", "Shadow", "Arena",
     "Wheel", "RankReward", "MonthyCard", "Direction", "Pagoda", "DeathEffect", "Empty", "Dispatch", "Party", "Tips", "Middle", "Role",
-    "Dungeon"
+    "Dungeon", "Ornament", "Deco"
   ].join("\n"),
   stateTerms: [
     "Normal", "Nml", "Hover", "Active", "Selected", "Select", "Sel", "Unselected", "UnSel", "Disabled", "Forbidden", "Lock", "Unlock",
@@ -149,7 +149,7 @@ const ngrTrainingKnowledge = {
     "Sel=Selected", "Select=Selected", "Selected=Selected", "UnSel=Unselected", "Nml=Normal", "Normal=Normal", "Hover=Hover",
     "Active=Active", "Disabled=Disabled", "Forbidden=Forbidden", "PressedDwon=PressedDown", "PressedDown=PressedDown", "Check=Check",
     "Pick=Pick", "Ban=Ban", "Lock=Lock", "Unlock=Unlock", "Popup=Popup", "Toast=Toast", "Broadcast=Broadcast", "Recommend=Recommend",
-    "Reward=Rewards", "Rewards=Rewards", "GloryReward=GloryRewards", "GloryRewards=GloryRewards", "Background=BG", "background=BG", "底=BG", "背景图=BG", "GuideKey=GuideKey", "TitleBg=Title_BG", "MainBg=Main_BG", "IconBg=Icon_BG", "Bp=BattlePass", "AMatch=ArenaMatch",
+    "Reward=Rewards", "Rewards=Rewards", "GloryReward=GloryRewards", "GloryRewards=GloryRewards", "Background=BG", "background=BG", "底=BG", "背景图=BG", "前往按钮=Go_Button", "前往=Go", "卡带=Card", "卡片=Card", "卡=Card", "装饰品=Ornament", "装饰=Deco", "左上角=TopLeft", "右上角=TopRight", "左下角=BottomLeft", "右下角=BottomRight", "左上=TopLeft", "右上=TopRight", "左下=BottomLeft", "右下=BottomRight", "GuideKey=GuideKey", "TitleBg=Title_BG", "MainBg=Main_BG", "IconBg=Icon_BG", "Bp=BattlePass", "AMatch=ArenaMatch",
     "VX=VFX"
   ].join("\n"),
   contextDocs: [
@@ -216,6 +216,8 @@ const builtinTranslations = {
   底: "BG",
   底板: "BG",
   底纹: "Pattern",
+  前往按钮: "Go_Button",
+  前往: "Go",
   按钮: "Button",
   图标: "Icon",
   导航: "Nav",
@@ -247,10 +249,14 @@ const builtinTranslations = {
   白菊: "White_Chrysanthemum",
   菊花: "Chrysanthemum",
   花: "Flower",
-  左上: "Top_Left",
-  右上: "Top_Right",
-  左下: "Bottom_Left",
-  右下: "Bottom_Right",
+  左上角: "TopLeft",
+  右上角: "TopRight",
+  左下角: "BottomLeft",
+  右下角: "BottomRight",
+  左上: "TopLeft",
+  右上: "TopRight",
+  左下: "BottomLeft",
+  右下: "BottomRight",
   上: "Top",
   下: "Bottom",
   左: "Left",
@@ -280,7 +286,9 @@ const builtinTranslations = {
   对话框: "Dialog",
   窗口: "Window",
   面板: "Panel",
+  卡带: "Card",
   卡片: "Card",
+  卡: "Card",
   边框: "Frame",
   框: "Frame",
   线: "Line",
@@ -292,6 +300,7 @@ const builtinTranslations = {
   光: "Light",
   阴影: "Shadow",
   纹理: "Pattern",
+  装饰品: "Ornament",
   装饰: "Deco",
   角标: "Badge",
   头像: "Avatar",

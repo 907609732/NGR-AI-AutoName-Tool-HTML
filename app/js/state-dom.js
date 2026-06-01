@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.5 module: state-dom.js */
+/* NGRAI AutoName Tool V2.6 module: state-dom.js */
 let projects;
 let activeProjectId;
 let schemes;
@@ -165,6 +165,9 @@ const els = {
   baiduTranslateAppId: document.querySelector("#baiduTranslateAppId"),
   baiduTranslateSecret: document.querySelector("#baiduTranslateSecret"),
   baiduTranslateEndpoint: document.querySelector("#baiduTranslateEndpoint"),
+  textTranslateBaseUrl: document.querySelector("#textTranslateBaseUrl"),
+  textTranslateApiKey: document.querySelector("#textTranslateApiKey"),
+  textTranslateModel: document.querySelector("#textTranslateModel"),
   saveTranslatorSettings: document.querySelector("#saveTranslatorSettings"),
   testTranslatorSettings: document.querySelector("#testTranslatorSettings"),
   translatorInput: document.querySelector("#translatorInput"),

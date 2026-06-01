@@ -12,4 +12,7 @@ window.NGR_LOCAL_TRANSLATION_CONFIG = {
   baiduAppId: "填入你的百度翻译 App ID",
   baiduSecret: "填入你的百度翻译密钥",
   baiduEndpoint: "https://fanyi-api.baidu.com/api/trans/vip/translate",
+  textBaseUrl: "https://api.openai.com/v1",
+  textApiKey: "填入你的文本翻译模型 API Key",
+  textModel: "gpt-4.1-mini",
 };

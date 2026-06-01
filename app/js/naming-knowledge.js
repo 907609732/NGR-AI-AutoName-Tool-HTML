@@ -1,19 +1,26 @@
-/* NGRAI AutoName Tool V2.5 module: naming-knowledge.js */
-function makeRecommendations(asset, cachedKnowledge) {
+/* NGRAI AutoName Tool V2.6 module: naming-knowledge.js */
+function makeRecommendations(asset, cachedKnowledge, translatedOverride = "") {
   const source = normalizeSourceName(asset.originalBase);
   const knowledge = cachedKnowledge || parseKnowledge();
   const mapped = inferMappedTerms(source, knowledge);
   const tags = parseTags(rules.tags);
-  const translatedSource = translateFilename(source, knowledge);
+  const translatedSource = translatedOverride || translateFilename(source, knowledge);
   const kind = mapped.component || inferKind(asset, source, tags, knowledge.componentTerms);
   const state = mapped.state || inferState(source, knowledge.stateTerms);
   const candidates = [
-    compactParts([kind, state]),
     compactParts([translatedSource || kind]),
+    compactParts([kind, state]),
     compactParts([kind, pickTerm(knowledge.stateTerms, "Normal", tags.includes("Normal") ? "Normal" : "常态")]),
     ...mapped.direct,
   ];
-  return [...new Set(candidates.map(removeProjectTermsFromName).map(formatNamingName).filter(Boolean))].slice(0, 5);
+  return [...new Set(candidates.map(removeProjectTermsFromName).map(formatNamingName).filter((name) => name && !containsChinese(name)))].slice(0, 5);
+}
+
+async function makeRecommendationsWithTranslation(asset, cachedKnowledge) {
+  const source = normalizeSourceName(asset.originalBase);
+  const knowledge = cachedKnowledge || parseKnowledge();
+  const translatedSource = await translateFilenameSmart(source, knowledge);
+  return makeRecommendations(asset, knowledge, translatedSource);
 }
 
 function buildLexiconCategories() {
@@ -114,7 +121,8 @@ function inferKind(asset, source, tags, componentTerms = []) {
   if (/mask|遮罩/.test(lower)) return pickTerm(componentTerms, "Mask", "Mask");
   if (/frame|border|边框/.test(lower)) return pickTerm(componentTerms, "Frame", "Frame");
   if (/light|glow|光/.test(lower)) return pickTerm(componentTerms, "Light", "Light");
-  if (/card|卡片/.test(lower)) return pickTerm(componentTerms, "Card", "Card");
+  if (/card|卡片|卡带|卡/.test(lower)) return pickTerm(componentTerms, "Card", "Card");
+  if (/ornament|deco|装饰品|装饰/.test(lower)) return pickTerm(componentTerms, "Ornament", "Ornament");
   if (/tab/.test(lower)) return pickTerm(componentTerms, "Tab", "Tab");
   if (/logo/.test(lower)) return pickTerm(componentTerms, "Logo", "Logo");
   if (/banner|横幅/.test(lower)) return pickTerm(componentTerms, "Banner", "Banner");
@@ -214,9 +222,8 @@ function inferMappedTerms(source, knowledge) {
   return { page, component, state, direct };
 }
 
-function translateFilename(source, knowledge) {
-  const dictionaryName = cleanNamingName(translateTextByDictionary(source)
-    .replace(/([a-z])([A-Z])/g, "$1_$2")
+function translateFilename(source, knowledge, options = {}) {
+  const dictionaryName = cleanNamingName(translateTextByDictionary(source, options)
     .replace(/[^A-Za-z0-9_]+/g, "_"));
   if (dictionaryName) return dictionaryName;
   const mappedValues = [];
@@ -228,18 +235,45 @@ function translateFilename(source, knowledge) {
   return "";
 }
 
+async function translateFilenameSmart(source, knowledge) {
+  const strictName = translateFilename(source, knowledge, { allowPinyin: false });
+  const pinyinName = translateFilename(source, knowledge, { allowPinyin: true });
+  if (!containsChinese(source) || translationSettings.provider === "local" || strictName === pinyinName) {
+    return pinyinName || strictName;
+  }
+  try {
+    const externalName = await translateFilenameByConfiguredProvider(source);
+    return externalName || pinyinName || strictName;
+  } catch {
+    return pinyinName || strictName;
+  }
+}
+
 function translateRuleValue(value) {
   return builtinTranslations[value] || value;
 }
 
-function translateTextByDictionary(value) {
+function translateTextByDictionary(value, options = {}) {
+  const allowPinyin = options.allowPinyin !== false;
   let result = String(value || "");
   Object.entries(builtinTranslations)
     .sort((a, b) => b[0].length - a[0].length)
     .forEach(([zh, en]) => {
       result = result.split(zh).join("_" + en + "_");
     });
-  return result;
+  return allowPinyin ? transliterateChineseChunks(result) : result;
+}
+
+async function translateFilenameByConfiguredProvider(source) {
+  if (translationSettings.provider === "baidu") {
+    const apiText = await translateTextByApi(source, "zh", "en");
+    return cleanNamingName(String(apiText || "").replace(/([a-z])([A-Z])/g, "$1_$2").replace(/[^A-Za-z0-9_]+/g, "_"));
+  }
+  if (translationSettings.provider === "model") {
+    const apiText = await translateTextByModel(source);
+    return cleanNamingName(String(apiText || "").replace(/([a-z])([A-Z])/g, "$1_$2").replace(/[^A-Za-z0-9_]+/g, "_"));
+  }
+  return "";
 }
 
 async function translateTextByApi(text, from, to) {
@@ -264,6 +298,51 @@ async function translateTextByApi(text, from, to) {
   const data = await response.json();
   if (data.error_code) throw new Error((data.error_code || "") + " " + (data.error_msg || "百度翻译返回错误"));
   return (data.trans_result || []).map((item) => item.dst).join(" ").trim();
+}
+
+async function translateTextByModel(text) {
+  if (translationSettings.provider !== "model") return "";
+  if (!translationSettings.textApiKey) throw new Error("请先填写文本翻译模型 API Key");
+  const endpoint = buildTextModelEndpoint(translationSettings.textBaseUrl);
+  const prompt = [
+    "你是 UI 切图命名翻译助手。",
+    "请把中文文件名翻译成简洁英文 UI 命名词，只返回名称本身。",
+    "要求：PascalCase 英文词组，用下划线连接；不要包含文件扩展名、图片尺寸、固定前缀或工程名。",
+    "如果背景/底/底图出现，使用 BG；如果中文无法准确翻译，可以使用拼音但仍保持 PascalCase。",
+    "原始文件名：" + String(text || "").trim(),
+  ].join("\n");
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + translationSettings.textApiKey,
+    },
+    body: JSON.stringify({
+      model: translationSettings.textModel || "gpt-4.1-mini",
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      temperature: 0.2,
+    }),
+  });
+  if (!response.ok) throw new Error("文本模型请求失败：" + response.status);
+  const data = await response.json();
+  return extractTextModelResponse(data);
+}
+
+function buildTextModelEndpoint(baseUrl) {
+  const cleanBase = normalizeBaseUrl(baseUrl || "https://api.openai.com/v1");
+  return /\/chat\/completions$/i.test(cleanBase) ? cleanBase : cleanBase + "/chat/completions";
+}
+
+function extractTextModelResponse(data) {
+  const chatText = data.choices?.[0]?.message?.content;
+  if (Array.isArray(chatText)) return chatText.map((part) => part.text || "").join("\n").trim();
+  if (typeof chatText === "string") return chatText.trim();
+  return "";
 }
 
 function explainEnglishName(name) {
@@ -483,11 +562,39 @@ function sanitizeName(name) {
 }
 
 function cleanNamingName(name) {
-  return sanitizeName(name)
+  return stripDimensionTokens(sanitizeName(name))
     .split(/_+/)
     .map(normalizeNamingPart)
     .filter((part) => part && !FORBIDDEN_NAMING_TERMS.includes(part.toLowerCase()))
     .join("_");
+}
+
+function stripDimensionTokens(name) {
+  const parts = sanitizeName(name).split(/_+/).filter(Boolean);
+  const nextParts = [];
+  for (let index = 0; index < parts.length; index += 1) {
+    const part = parts[index];
+    const next = parts[index + 1] || "";
+    if (/^\d{2,5}x\d{2,5}$/i.test(part)) continue;
+    if (/^w\d{2,5}$/i.test(part) && /^h\d{2,5}$/i.test(next)) {
+      index += 1;
+      continue;
+    }
+    if (/^h\d{2,5}$/i.test(part) && /^w\d{2,5}$/i.test(next)) {
+      index += 1;
+      continue;
+    }
+    if (isDimensionNumber(part) && isDimensionNumber(next)) {
+      index += 1;
+      continue;
+    }
+    nextParts.push(part);
+  }
+  return nextParts.join("_");
+}
+
+function isDimensionNumber(value) {
+  return /^\d{2,5}$/.test(value) && Number(value) > 31;
 }
 
 function normalizeNamingPart(part) {
@@ -532,3 +639,36 @@ function removeTrailingSequence(base) {
 function formatSequenceNumber(value) {
   return String(value).padStart(2, "0");
 }
+
+function containsChinese(value) {
+  return /[\u4e00-\u9fff]/.test(String(value || ""));
+}
+
+function transliterateChineseChunks(value) {
+  return String(value || "").replace(/[\u4e00-\u9fff]+/g, (chunk) => "_" + chineseToPinyinPascal(chunk) + "_");
+}
+
+function chineseToPinyinPascal(value) {
+  return [...String(value || "")]
+    .map((char) => COMMON_PINYIN_MAP[char] || "Han")
+    .join("");
+}
+
+const COMMON_PINYIN_MAP = {
+  一: "Yi", 二: "Er", 三: "San", 四: "Si", 五: "Wu", 六: "Liu", 七: "Qi", 八: "Ba", 九: "Jiu", 十: "Shi", 百: "Bai", 千: "Qian", 万: "Wan",
+  上: "Shang", 下: "Xia", 左: "Zuo", 右: "You", 中: "Zhong", 前: "Qian", 后: "Hou", 内: "Nei", 外: "Wai", 大: "Da", 小: "Xiao", 长: "Chang", 短: "Duan",
+  新: "Xin", 旧: "Jiu", 热: "Re", 冷: "Leng", 明: "Ming", 暗: "An", 亮: "Liang", 黑: "Hei", 白: "Bai", 红: "Hong", 蓝: "Lan", 黄: "Huang", 绿: "Lv", 紫: "Zi", 金: "Jin", 银: "Yin", 灰: "Hui",
+  奇: "Qi", 珍: "Zhen", 宝: "Bao", 物: "Wu", 品: "Pin", 道: "Dao", 具: "Ju", 材: "Cai", 料: "Liao", 资: "Zi", 源: "Yuan",
+  卡: "Ka", 片: "Pian", 带: "Dai", 牌: "Pai", 按: "An", 钮: "Niu", 键: "Jian", 往: "Wang", 去: "Qu", 来: "Lai", 返: "Fan", 回: "Hui",
+  装: "Zhuang", 饰: "Shi", 角: "Jiao", 边: "Bian", 框: "Kuang", 底: "Di", 背: "Bei", 景: "Jing", 图: "Tu", 标: "Biao", 题: "Ti", 文: "Wen", 字: "Zi",
+  常: "Chang", 态: "Tai", 普: "Pu", 通: "Tong", 悬: "Xuan", 浮: "Fu", 按: "An", 压: "Ya", 选: "Xuan", 未: "Wei", 禁: "Jin", 用: "Yong", 锁: "Suo", 定: "Ding",
+  开: "Kai", 关: "Guan", 闭: "Bi", 激: "Ji", 活: "Huo", 焦: "Jiao", 点: "Dian", 勾: "Gou",
+  首: "Shou", 主: "Zhu", 页: "Ye", 界: "Jie", 面: "Mian", 个: "Ge", 人: "Ren", 我: "Wo", 的: "De", 设: "She", 置: "Zhi",
+  登: "Deng", 录: "Lu", 陆: "Lu", 商: "Shang", 店: "Dian", 城: "Cheng", 市: "Shi", 场: "Chang", 森: "Sen", 林: "Lin",
+  营: "Ying", 业: "Ye", 经: "Jing", 记: "Ji", 录: "Lu", 控: "Kong", 件: "Jian", 遮: "Zhe", 罩: "Zhao", 覆: "Fu", 盖: "Gai", 层: "Ceng",
+  游: "You", 历: "Li", 日: "Ri", 志: "Zhi", 手: "Shou", 札: "Zha", 笔: "Bi", 冒: "Mao", 险: "Xian", 旅: "Lv", 程: "Cheng",
+  菊: "Ju", 花: "Hua", 奖: "Jiang", 励: "Li", 礼: "Li", 包: "Bao", 货: "Huo", 币: "Bi", 钻: "Zuan", 石: "Shi", 任: "Ren", 务: "Wu",
+  邮: "You", 件: "Jian", 背: "Bei", 包: "Bao", 地: "Di", 技: "Ji", 能: "Neng", 排: "Pai", 名: "Ming", 提: "Ti", 示: "Shi", 公: "Gong", 告: "Gao",
+  输: "Shu", 入: "Ru", 滑: "Hua", 条: "Tiao", 弹: "Tan", 窗: "Chuang", 对: "Dui", 话: "Hua", 线: "Xian", 分: "Fen", 割: "Ge", 进: "Jin", 度: "Du",
+  光: "Guang", 效: "Xiao", 阴: "Yin", 影: "Ying", 纹: "Wen", 理: "Li", 头: "Tou", 像: "Xiang", 立: "Li", 绘: "Hui",
+};

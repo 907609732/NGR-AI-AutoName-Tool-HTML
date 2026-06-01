@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.5 module: export-template-storage.js */
+/* NGRAI AutoName Tool V2.6 module: export-template-storage.js */
 async function exportRenamedFiles() {
   if (!assets.length) {
     showToast("没有可导出的图片");
@@ -583,6 +583,9 @@ function collectTranslationSettings() {
     baiduAppId: els.baiduTranslateAppId.value.trim(),
     baiduSecret: els.baiduTranslateSecret.value.trim(),
     baiduEndpoint: normalizeTranslateEndpoint(els.baiduTranslateEndpoint.value),
+    textBaseUrl: normalizeBaseUrl(els.textTranslateBaseUrl.value),
+    textApiKey: els.textTranslateApiKey.value.trim(),
+    textModel: els.textTranslateModel.value.trim(),
   });
 }
 
@@ -591,6 +594,9 @@ function fillTranslationSettings() {
   els.baiduTranslateAppId.value = translationSettings.baiduAppId;
   els.baiduTranslateSecret.value = translationSettings.baiduSecret;
   els.baiduTranslateEndpoint.value = translationSettings.baiduEndpoint;
+  els.textTranslateBaseUrl.value = translationSettings.textBaseUrl;
+  els.textTranslateApiKey.value = translationSettings.textApiKey;
+  els.textTranslateModel.value = translationSettings.textModel;
 }
 
 function loadTranslationSettings() {
@@ -604,6 +610,9 @@ function loadTranslationSettings() {
       baiduAppId: localConfig.baiduAppId || savedConfig.baiduAppId,
       baiduSecret: localConfig.baiduSecret || savedConfig.baiduSecret,
       baiduEndpoint: localConfig.baiduEndpoint || savedConfig.baiduEndpoint,
+      textBaseUrl: localConfig.textBaseUrl || savedConfig.textBaseUrl,
+      textApiKey: localConfig.textApiKey || savedConfig.textApiKey,
+      textModel: localConfig.textModel || savedConfig.textModel,
     });
   } catch {
     return normalizeTranslationSettings(readLocalTranslationConfig());
@@ -616,11 +625,15 @@ function saveTranslationSettings(nextSettings) {
 
 function normalizeTranslationSettings(nextSettings = {}) {
   nextSettings = nextSettings || {};
+  const provider = ["local", "baidu", "model"].includes(nextSettings.provider) ? nextSettings.provider : "local";
   return {
-    provider: nextSettings.provider === "baidu" ? "baidu" : "local",
+    provider,
     baiduAppId: nextSettings.baiduAppId || "",
     baiduSecret: nextSettings.baiduSecret || "",
     baiduEndpoint: normalizeTranslateEndpoint(nextSettings.baiduEndpoint || "https://fanyi-api.baidu.com/api/trans/vip/translate"),
+    textBaseUrl: normalizeBaseUrl(nextSettings.textBaseUrl || "https://api.openai.com/v1"),
+    textApiKey: nextSettings.textApiKey || "",
+    textModel: nextSettings.textModel || "gpt-4.1-mini",
   };
 }
 

@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.5 module: ai-workflow.js */
+/* NGRAI AutoName Tool V2.6 module: ai-workflow.js */
 async function runNaming() {
   return runNamingWorkflow({ useAi: true });
 }
@@ -26,10 +26,11 @@ async function runNamingWorkflow({ useAi }) {
   renderAssetList();
   await yieldToBrowser();
 
+  const processedAssets = [];
   for (let index = 0; index < assets.length; index += 1) {
     if (stopRequested) break;
     const asset = assets[index];
-    const localRecommendations = makeRecommendations(asset, knowledge);
+    const localRecommendations = shouldUseAi ? makeRecommendations(asset, knowledge) : await makeRecommendationsWithTranslation(asset, knowledge);
     let recommendations = localRecommendations;
     asset.namingStatus = "running";
     asset.statusMessage = "正在处理第 " + (index + 1) + " 张";
@@ -48,6 +49,7 @@ async function runNamingWorkflow({ useAi }) {
       asset.finalBaseName = asset.finalBaseName || asset.recommendations[0];
       asset.namingStatus = "done";
       asset.statusMessage = shouldUseAi ? "AI 命名完成" : "本地知识库完成";
+      processedAssets.push(asset);
     } catch (error) {
       if (stopRequested || error.name === "AbortError") {
         asset.namingStatus = "pending";
@@ -58,6 +60,7 @@ async function runNamingWorkflow({ useAi }) {
       asset.finalBaseName = asset.finalBaseName || localRecommendations[0];
       asset.namingStatus = "failed";
       asset.statusMessage = "AI 失败，已使用本地推荐";
+      processedAssets.push(asset);
     }
     setRunButtonLoading(true, progressLabel + (index + 1) + "/" + assets.length);
     if (shouldUseAi || (index + 1) % progressStep === 0 || index === assets.length - 1) {
@@ -67,6 +70,7 @@ async function runNamingWorkflow({ useAi }) {
   }
 
   namingController = null;
+  applySemanticSequenceNumbers(processedAssets);
   setRunButtonLoading(false);
   renderAssetList();
   showToast(stopRequested ? "已终止命名" : shouldUseAi ? "AI 推荐命名已完成" : "已使用本地知识库生成推荐名称");
@@ -304,6 +308,8 @@ function buildAiPrompt(asset, localRecommendations) {
     "你是 UI 切图命名助手。请根据切图图片、参考效果图、原始文件名和团队命名知识库，生成 2 到 5 个英文语义名称。",
     "只返回 JSON，格式为：{\"names\":[\"Login_Button_Hover\",\"Home_BG\"]}。",
     "不要包含固定前缀、工程名、文件扩展名。名称只允许英文字母、数字和下划线，使用 Pascal/Title 英文词组并以下划线连接。",
+    "禁止把图片分辨率或尺寸写进命名，例如 292x292、256X128、1024_512、w292_h292 都不能出现。",
+    "只有同语义相似图片排序时，才允许在末尾使用 01、02、03、04 这类两位序号。",
     "命名单词禁止出现 Module 或 Modules；如果需要表达通用元素，请使用 Item、Panel、Card、Icon、BG 等更具体词。",
     "命名单词禁止出现 Background；凡是背景、底图、底、background、Background，都必须使用短词 BG。",
     "原始文件名：" + asset.originalBase + asset.extension,
@@ -348,6 +354,30 @@ function normalizeAiNames(names, fallback) {
     .filter(Boolean)
     .filter((name) => /^[A-Za-z0-9_]+$/.test(name));
   return [...new Set(normalized)].slice(0, 5).length ? [...new Set(normalized)].slice(0, 5) : fallback;
+}
+
+function applySemanticSequenceNumbers(targetAssets) {
+  const groups = new Map();
+  targetAssets.forEach((asset) => {
+    const base = removeTrailingSequence(asset.recommendations?.[0] || asset.finalBaseName || "");
+    if (!base) return;
+    const key = base.toLowerCase();
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(asset);
+  });
+  groups.forEach((group) => {
+    if (group.length < 2) return;
+    group.forEach((asset, index) => {
+      const sequence = formatSequenceNumber(index + 1);
+      const firstBase = removeTrailingSequence(asset.recommendations?.[0] || asset.finalBaseName || "");
+      const nextFirst = appendPart(firstBase, sequence);
+      asset.recommendations = (asset.recommendations || [])
+        .map((name) => appendPart(removeTrailingSequence(name), sequence))
+        .filter(Boolean);
+      if (!asset.recommendations.length) asset.recommendations = [nextFirst];
+      asset.finalBaseName = appendPart(removeTrailingSequence(asset.finalBaseName || firstBase), sequence);
+    });
+  });
 }
 
 async function imageFileToDataUrl(file, maxSide) {
