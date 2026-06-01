@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.6 module: naming-knowledge.js */
+/* NGRAI AutoName Tool V2.7 module: naming-knowledge.js */
 function makeRecommendations(asset, cachedKnowledge, translatedOverride = "") {
   const source = normalizeSourceName(asset.originalBase);
   const knowledge = cachedKnowledge || parseKnowledge();
@@ -293,11 +293,44 @@ async function translateTextByApi(text, from, to) {
     salt,
     sign,
   });
-  const response = await fetch(translationSettings.baiduEndpoint + "?" + params.toString());
-  if (!response.ok) throw new Error("接口请求失败：" + response.status);
-  const data = await response.json();
+  let data;
+  try {
+    const response = await fetch(translationSettings.baiduEndpoint + "?" + params.toString());
+    if (!response.ok) throw new Error("接口请求失败：" + response.status);
+    data = await response.json();
+  } catch (error) {
+    data = await translateTextByBaiduJsonp(params);
+  }
   if (data.error_code) throw new Error((data.error_code || "") + " " + (data.error_msg || "百度翻译返回错误"));
   return (data.trans_result || []).map((item) => item.dst).join(" ").trim();
+}
+
+function translateTextByBaiduJsonp(params) {
+  return new Promise((resolve, reject) => {
+    const callbackName = "ngrBaiduTranslateCallback_" + Date.now() + "_" + Math.random().toString(16).slice(2);
+    const script = document.createElement("script");
+    const timeout = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("百度翻译 JSONP 请求超时，可能需要确认 API 服务是否已开通"));
+    }, 10000);
+    const cleanup = () => {
+      window.clearTimeout(timeout);
+      delete window[callbackName];
+      script.remove();
+    };
+    window[callbackName] = (data) => {
+      cleanup();
+      resolve(data);
+    };
+    script.onerror = () => {
+      cleanup();
+      reject(new Error("百度翻译请求失败，可能是网络、签名或接口权限问题"));
+    };
+    const jsonpParams = new URLSearchParams(params);
+    jsonpParams.set("callback", callbackName);
+    script.src = translationSettings.baiduEndpoint + "?" + jsonpParams.toString();
+    document.body.appendChild(script);
+  });
 }
 
 async function translateTextByModel(text) {

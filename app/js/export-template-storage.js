@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.6 module: export-template-storage.js */
+/* NGRAI AutoName Tool V2.7 module: export-template-storage.js */
 async function exportRenamedFiles() {
   if (!assets.length) {
     showToast("没有可导出的图片");
@@ -654,6 +654,10 @@ function normalizeAiSettings(nextSettings = {}) {
 
 function readLocalAiConfig() {
   return window.NGR_LOCAL_AI_CONFIG || {};
+}
+
+function readLocalKimiConfig() {
+  return window.NGR_LOCAL_KIMI_CONFIG || {};
 }
 
 function readLocalTranslationConfig() {

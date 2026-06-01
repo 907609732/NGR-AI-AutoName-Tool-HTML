@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.6 module: uploads-editor-translator.js */
+/* NGRAI AutoName Tool V2.7 module: uploads-editor-translator.js */
 function bindUploads() {
   els.folderInput.addEventListener("change", (event) => addFiles([...event.target.files]));
   els.singleInput.addEventListener("change", (event) => addFiles([...event.target.files]));
@@ -123,11 +123,47 @@ function bindTranslator() {
     const translated = await translateToNamingWord(source);
     els.translatorOutput.textContent = translated ? "命名词：" + translated + "\n中文含义：" + await explainNameWithTranslation(translated) : "没有匹配到可用命名词";
   });
+  els.translatorApplyName.addEventListener("click", applyTranslatorNameToSelectedAsset);
   els.translatorExplain.addEventListener("click", async () => {
     const source = cleanNamingName(els.translatorInput.value);
     els.translatorOutput.textContent = source ? "翻译中..." : "请输入需要解释的英文命名";
     if (source) els.translatorOutput.textContent = await explainNameWithTranslation(source);
   });
+}
+
+async function applyTranslatorNameToSelectedAsset() {
+  const asset = getTranslatorTargetAsset();
+  if (!asset) {
+    els.translatorOutput.textContent = "请先在待处理图片列表中选择一张图片";
+    showToast("请先选择一张图片");
+    return;
+  }
+  const source = normalizeSourceName(els.translatorInput.value || asset.originalBase);
+  if (!source) {
+    els.translatorOutput.textContent = "请输入中文文件名、英文命名或单词";
+    return;
+  }
+  els.translatorOutput.textContent = "翻译并填入中...";
+  const translated = await translateToNamingWord(source);
+  if (!translated) {
+    els.translatorOutput.textContent = "没有匹配到可用命名词";
+    showToast("没有可填入的命名词");
+    return;
+  }
+  asset.finalBaseName = formatNamingName(translated);
+  if (!asset.recommendations.some((name) => name.toLowerCase() === asset.finalBaseName.toLowerCase())) {
+    asset.recommendations.unshift(asset.finalBaseName);
+    asset.recommendations = [...new Set(asset.recommendations)].slice(0, 5);
+  }
+  selectedId = asset.id;
+  renderAssetList();
+  els.translatorOutput.textContent = "已填入最终名称：" + asset.finalBaseName + "\n中文含义：" + await explainNameWithTranslation(asset.finalBaseName);
+  showToast("已填入选中图片的最终名称");
+}
+
+function getTranslatorTargetAsset() {
+  if (!assets.length) return null;
+  return assets.find((asset) => asset.id === selectedId) || assets.find((asset) => asset.checked) || assets[0];
 }
 
 async function translateToNamingWord(source) {

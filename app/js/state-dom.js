@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.6 module: state-dom.js */
+/* NGRAI AutoName Tool V2.7 module: state-dom.js */
 let projects;
 let activeProjectId;
 let schemes;
@@ -172,6 +172,7 @@ const els = {
   testTranslatorSettings: document.querySelector("#testTranslatorSettings"),
   translatorInput: document.querySelector("#translatorInput"),
   translatorToName: document.querySelector("#translatorToName"),
+  translatorApplyName: document.querySelector("#translatorApplyName"),
   translatorExplain: document.querySelector("#translatorExplain"),
   translatorOutput: document.querySelector("#translatorOutput"),
   toast: document.querySelector("#toast"),
