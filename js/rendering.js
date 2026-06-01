@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.2 module: rendering.js */
+/* NGRAI AutoName Tool V2.3 module: rendering.js */
 function renderAssetList() {
   const problemCount = assets.filter((asset) => asset.dimensionIssue).length;
   els.fileCount.textContent = assets.length + " 张" + (problemCount ? " / " + problemCount + " 张问题" : "");
