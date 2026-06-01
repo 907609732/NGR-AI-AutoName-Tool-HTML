@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.1 module: ai-workflow.js */
+/* NGRAI AutoName Tool V2.2 module: ai-workflow.js */
 async function runNaming() {
   return runNamingWorkflow({ useAi: true });
 }
@@ -208,7 +208,7 @@ function applyProviderPreset() {
 function useTempAiSettings() {
   const localConfig = normalizeAiSettings(readLocalAiConfig());
   if (!localConfig.apiKey) {
-    showToast("未找到临时测试 API，请先配置 local-config.js");
+    showToast("未找到临时测试 API，请先配置 API配置文件/local-config.js");
     return;
   }
   aiSettings = localConfig;

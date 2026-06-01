@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.1 module: config.js */
+/* NGRAI AutoName Tool V2.2 module: config.js */
 const STORAGE_KEY = "ngr-ai-autoname-rules";
 const SCHEME_KEY = "ngr-ai-autoname-rule-schemes";
 const PROJECTS_KEY = "ngr-ai-autoname-projects";
