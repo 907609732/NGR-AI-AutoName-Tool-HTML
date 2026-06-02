@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.11 module: rendering.js */
+/* NGRAI AutoName Tool V2.12 module: rendering.js */
 function renderAssetList() {
   const problemCount = assets.filter((asset) => asset.dimensionIssue).length;
   els.fileCount.textContent = assets.length + " 张" + (problemCount ? " / " + problemCount + " 张问题" : "");
@@ -146,7 +146,8 @@ function renderAssetList() {
       nameText.textContent = name;
       const meaningText = document.createElement("span");
       meaningText.className = "recommendation-meaning";
-      meaningText.textContent = "中文含义：" + explainEnglishName(name);
+      meaningText.dataset.meaningKey = getMeaningKey(name);
+      meaningText.textContent = "中文含义：" + getDisplayMeaning(name);
       button.append(nameText, meaningText);
       button.addEventListener("click", () => {
         asset.finalBaseName = formatNamingName(name);
@@ -170,11 +171,13 @@ function renderAssetList() {
     finalInput.placeholder = "请选择推荐名称或手动输入";
     const finalMeaning = document.createElement("span");
     finalMeaning.className = "name-meaning";
-    finalMeaning.textContent = "中文含义：" + explainEnglishName(asset.finalBaseName);
+    finalMeaning.dataset.meaningKey = getMeaningKey(asset.finalBaseName);
+    finalMeaning.textContent = "中文含义：" + getDisplayMeaning(asset.finalBaseName);
     finalInput.addEventListener("input", () => {
       asset.finalBaseName = formatNamingName(finalInput.value);
       afterName.querySelector("strong").textContent = asset.finalBaseName ? buildExportName(asset) : "待命名";
-      finalMeaning.textContent = "中文含义：" + explainEnglishName(asset.finalBaseName);
+      finalMeaning.dataset.meaningKey = getMeaningKey(asset.finalBaseName);
+      finalMeaning.textContent = "中文含义：" + getDisplayMeaning(asset.finalBaseName);
     });
     finalField.append(finalInput, finalMeaning);
     finalLabel.append(finalText, finalField);
@@ -210,7 +213,8 @@ function renderAssetList() {
           asset.finalBaseName = toggleLexiconTerm(asset.finalBaseName, term);
           finalInput.value = asset.finalBaseName;
           afterName.querySelector("strong").textContent = asset.finalBaseName ? buildExportName(asset) : "待命名";
-          finalMeaning.textContent = "中文含义：" + explainEnglishName(asset.finalBaseName);
+          finalMeaning.dataset.meaningKey = getMeaningKey(asset.finalBaseName);
+          finalMeaning.textContent = "中文含义：" + getDisplayMeaning(asset.finalBaseName);
           const nextDuplicateStatus = getDuplicateStatus(asset);
           duplicateCheck.querySelector("strong").textContent = nextDuplicateStatus.message;
           duplicateCheck.classList.toggle("warning-line", nextDuplicateStatus.hasIssue);

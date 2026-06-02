@@ -1,4 +1,11 @@
-/* NGRAI AutoName Tool V2.11 module: export-template-storage.js */
+/* NGRAI AutoName Tool V2.12 module: export-template-storage.js */
+function resetAppLocalStorageOnVersionChange() {
+  const savedVersion = localStorage.getItem(APP_VERSION_KEY);
+  if (savedVersion === APP_VERSION) return;
+  APP_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
+  localStorage.setItem(APP_VERSION_KEY, APP_VERSION);
+}
+
 async function exportRenamedFiles() {
   if (!assets.length) {
     showToast("没有可导出的图片");
@@ -622,6 +629,19 @@ function loadTranslationSettings() {
 
 function saveTranslationSettings(nextSettings) {
   localStorage.setItem(TRANSLATION_SETTINGS_KEY, JSON.stringify(nextSettings));
+}
+
+function loadMeaningCache() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(MEANING_CACHE_KEY));
+    return saved && typeof saved === "object" ? saved : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveMeaningCache() {
+  localStorage.setItem(MEANING_CACHE_KEY, JSON.stringify(meaningCache || {}));
 }
 
 function normalizeTranslationSettings(nextSettings = {}) {

@@ -1,4 +1,6 @@
-/* NGRAI AutoName Tool V2.11 module: config.js */
+/* NGRAI AutoName Tool V2.12 module: config.js */
+const APP_VERSION = "V2.12";
+const APP_VERSION_KEY = "ngr-ai-autoname-app-version";
 const STORAGE_KEY = "ngr-ai-autoname-rules";
 const SCHEME_KEY = "ngr-ai-autoname-rule-schemes";
 const PROJECTS_KEY = "ngr-ai-autoname-projects";
@@ -9,12 +11,27 @@ const DETECTION_PROFILES_KEY = "ngr-ai-autoname-detection-profiles";
 const ACTIVE_DETECTION_PROFILE_KEY = "ngr-ai-autoname-active-detection-profile";
 const LIST_DISPLAY_MODE_KEY = "ngr-ai-autoname-list-display-mode";
 const LIST_SORT_MODE_KEY = "ngr-ai-autoname-list-sort-mode";
+const MEANING_CACHE_KEY = "ngr-ai-autoname-meaning-cache";
+const APP_STORAGE_KEYS = [
+  STORAGE_KEY,
+  SCHEME_KEY,
+  PROJECTS_KEY,
+  ACTIVE_PROJECT_KEY,
+  AI_SETTINGS_KEY,
+  TRANSLATION_SETTINGS_KEY,
+  DETECTION_PROFILES_KEY,
+  ACTIVE_DETECTION_PROFILE_KEY,
+  LIST_DISPLAY_MODE_KEY,
+  LIST_SORT_MODE_KEY,
+  MEANING_CACHE_KEY,
+];
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"];
 const UPLOAD_PROCESS_BATCH_SIZE = 80;
 const UPLOAD_CONCURRENCY = 4;
 const ASSET_RENDER_BATCH_SIZE = 120;
 const DETECTION_RENDER_BATCH_SIZE = 160;
 const MAX_DUPLICATE_SCAN_ASSETS = 600;
+const BAIDU_NAMING_CONCURRENCY = 3;
 const NGR_TRAINING_VERSION = 7;
 const YYSLS_TRAINING_VERSION = 1;
 const FORBIDDEN_NAMING_TERMS = ["module", "modules"];

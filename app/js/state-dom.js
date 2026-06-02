@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.11 module: state-dom.js */
+/* NGRAI AutoName Tool V2.12 module: state-dom.js */
 let projects;
 let activeProjectId;
 let schemes;
@@ -25,6 +25,9 @@ let knowledgeCacheValue;
 let assetRenderLimit;
 let detectionRenderLimit;
 let guideStepIndex;
+let baiduTextCache;
+let meaningCache;
+let pendingMeaningNames;
 
 function bootstrapState() {
   projects = loadProjects();
@@ -53,6 +56,9 @@ function bootstrapState() {
   assetRenderLimit = ASSET_RENDER_BATCH_SIZE;
   detectionRenderLimit = DETECTION_RENDER_BATCH_SIZE;
   guideStepIndex = 0;
+  baiduTextCache = new Map();
+  meaningCache = loadMeaningCache();
+  pendingMeaningNames = new Set();
 }
 
 const els = {

@@ -1,4 +1,7 @@
-/* NGRAI AutoName Tool V2.11 module: naming-knowledge.js */
+/* NGRAI AutoName Tool V2.12 module: naming-knowledge.js */
+let meaningQueue = [];
+let meaningQueueActive = 0;
+
 function makeRecommendations(asset, cachedKnowledge, translatedOverride = "") {
   const source = normalizeSourceName(asset.originalBase);
   const knowledge = cachedKnowledge || parseKnowledge();
@@ -239,13 +242,13 @@ async function translateFilenameSmart(source, knowledge, options = {}) {
   const strictName = translateFilename(source, knowledge, { allowPinyin: false });
   const pinyinName = translateFilename(source, knowledge, { allowPinyin: true });
   if (options.allowExternal === false || !containsChinese(source) || translationSettings.provider === "local" || strictName === pinyinName) {
-    return pinyinName || strictName;
+    return formatNamingName(pinyinName || strictName);
   }
   try {
     const externalName = await translateFilenameByConfiguredProvider(source);
-    return externalName || pinyinName || strictName;
+    return formatNamingName(externalName || pinyinName || strictName);
   } catch {
-    return pinyinName || strictName;
+    return formatNamingName(pinyinName || strictName);
   }
 }
 
@@ -281,9 +284,20 @@ async function translateTextByApi(text, from, to) {
   if (!translationSettings.baiduAppId || !translationSettings.baiduSecret) {
     throw new Error("请先填写百度翻译 App ID 和密钥");
   }
-  const salt = String(Date.now());
   const query = String(text || "").trim();
   if (!query) return "";
+  const cacheKey = ["baidu", from, to, query].join("\u001f").toLowerCase();
+  if (baiduTextCache.has(cacheKey)) return baiduTextCache.get(cacheKey);
+  const request = requestBaiduTranslate(query, from, to).catch((error) => {
+    baiduTextCache.delete(cacheKey);
+    throw error;
+  });
+  baiduTextCache.set(cacheKey, request);
+  return request;
+}
+
+async function requestBaiduTranslate(query, from, to) {
+  const salt = String(Date.now());
   const sign = md5(translationSettings.baiduAppId + query + salt + translationSettings.baiduSecret);
   const params = new URLSearchParams({
     q: query,
@@ -411,6 +425,61 @@ function explainEnglishName(name) {
     }
   }
   return meanings.join(" / ");
+}
+
+function getDisplayMeaning(name) {
+  const key = getMeaningKey(name);
+  if (!key) return "待填写";
+  if (meaningCache[key]) return meaningCache[key];
+  const localMeaning = explainEnglishName(name);
+  scheduleBaiduMeaningTranslation(name, key);
+  return localMeaning;
+}
+
+function getMeaningKey(name) {
+  return cleanNamingName(name).toLowerCase();
+}
+
+function scheduleBaiduMeaningTranslation(name, key = getMeaningKey(name)) {
+  if (!key || meaningCache[key] || pendingMeaningNames.has(key)) return;
+  if (translationSettings.provider !== "baidu" || !translationSettings.baiduAppId || !translationSettings.baiduSecret) return;
+  pendingMeaningNames.add(key);
+  meaningQueue.push({ name, key });
+  runMeaningQueue();
+}
+
+function runMeaningQueue() {
+  while (meaningQueueActive < 2 && meaningQueue.length) {
+    const item = meaningQueue.shift();
+    meaningQueueActive += 1;
+    translateMeaningItem(item)
+      .catch(() => {
+        pendingMeaningNames.delete(item.key);
+      })
+      .finally(() => {
+        meaningQueueActive -= 1;
+        runMeaningQueue();
+      });
+  }
+}
+
+async function translateMeaningItem(item) {
+  const readable = cleanNamingName(item.name).replace(/_/g, " ");
+  const translated = await translateTextByApi(readable, "en", "zh");
+  if (!translated) {
+    pendingMeaningNames.delete(item.key);
+    return;
+  }
+  meaningCache[item.key] = translated;
+  saveMeaningCache();
+  pendingMeaningNames.delete(item.key);
+  updateMeaningElements(item.key, translated);
+}
+
+function updateMeaningElements(key, translated) {
+  document.querySelectorAll('[data-meaning-key="' + key + '"]').forEach((node) => {
+    node.textContent = "中文含义：" + translated;
+  });
 }
 
 function buildChinesePhraseDictionary() {
@@ -635,6 +704,9 @@ function normalizeNamingPart(part) {
     bg: "BG",
     background: "BG",
     backgrounds: "BG",
+    mainbg: "MainBG",
+    panelbg: "PanelBG",
+    iconbg: "IconBG",
   };
   const clean = sanitizeName(part);
   return aliases[clean.toLowerCase()] || clean;
@@ -646,7 +718,30 @@ function shouldUseLowercaseNaming() {
 
 function formatNamingName(name) {
   const clean = cleanNamingName(name);
-  return shouldUseLowercaseNaming() ? clean.toLowerCase() : clean;
+  if (shouldUseLowercaseNaming()) return clean.toLowerCase();
+  return clean.split(/_+/).map(formatNamingPart).filter(Boolean).join("_");
+}
+
+function formatNamingPart(part) {
+  const clean = sanitizeName(part);
+  if (!clean) return "";
+  const lower = clean.toLowerCase();
+  const acronyms = {
+    bg: "BG",
+    ui: "UI",
+    ngr: "NGR",
+    id: "ID",
+    npc: "NPC",
+    pvp: "PVP",
+    pve: "PVE",
+    rpg: "RPG",
+    hp: "HP",
+    mp: "MP",
+  };
+  if (acronyms[lower]) return acronyms[lower];
+  if (/^\d+$/.test(clean)) return clean;
+  if (/[A-Z]/.test(clean.slice(1))) return clean.charAt(0).toUpperCase() + clean.slice(1);
+  return clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
 }
 
 function sanitizePrefix(prefix) {

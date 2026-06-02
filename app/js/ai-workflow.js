@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.11 module: ai-workflow.js */
+/* NGRAI AutoName Tool V2.12 module: ai-workflow.js */
 async function runNaming() {
   return runNamingWorkflow({ useAi: true });
 }
@@ -50,6 +50,16 @@ async function runNamingWorkflow({ useAi, useExternalTranslation = false }) {
   renderAssetList();
   await yieldToBrowser();
 
+  if (shouldUseExternalTranslation) {
+    const processedAssets = await runExternalTranslationNamingQueue(assets, knowledge, progressLabel);
+    namingController = null;
+    applySemanticSequenceNumbers(processedAssets);
+    setRunButtonLoading(false);
+    renderAssetList();
+    showToast(stopRequested ? "已终止命名" : "已使用翻译 API 生成推荐名称");
+    return;
+  }
+
   const processedAssets = [];
   for (let index = 0; index < assets.length; index += 1) {
     if (stopRequested) break;
@@ -98,6 +108,45 @@ async function runNamingWorkflow({ useAi, useExternalTranslation = false }) {
   setRunButtonLoading(false);
   renderAssetList();
   showToast(stopRequested ? "已终止命名" : shouldUseAi ? "AI 推荐命名已完成" : shouldUseExternalTranslation ? "已使用翻译 API 生成推荐名称" : "已使用本地知识库生成推荐名称");
+}
+
+async function runExternalTranslationNamingQueue(targetAssets, knowledge, progressLabel) {
+  const processedAssets = [];
+  let nextIndex = 0;
+  let completed = 0;
+  const workerCount = Math.min(BAIDU_NAMING_CONCURRENCY, targetAssets.length);
+  const runWorker = async () => {
+    while (!stopRequested) {
+      const index = nextIndex;
+      nextIndex += 1;
+      if (index >= targetAssets.length) return;
+      const asset = targetAssets[index];
+      asset.namingStatus = "running";
+      asset.statusMessage = "正在处理第 " + (index + 1) + " 张";
+      try {
+        const recommendations = await makeRecommendationsWithTranslation(asset, knowledge, { allowExternal: true });
+        asset.recommendations = recommendations.length ? recommendations : makeRecommendations(asset, knowledge);
+        asset.finalBaseName = asset.finalBaseName || asset.recommendations[0];
+        asset.namingStatus = "done";
+        asset.statusMessage = "翻译 API 命名完成";
+      } catch {
+        const fallback = makeRecommendations(asset, knowledge);
+        asset.recommendations = fallback;
+        asset.finalBaseName = asset.finalBaseName || fallback[0];
+        asset.namingStatus = "failed";
+        asset.statusMessage = "翻译 API 失败，已使用本地推荐";
+      }
+      processedAssets.push(asset);
+      completed += 1;
+      setRunButtonLoading(true, progressLabel + completed + "/" + targetAssets.length);
+      if (completed % 10 === 0 || completed === targetAssets.length) {
+        renderAssetList();
+        await yieldToBrowser();
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: workerCount }, runWorker));
+  return processedAssets;
 }
 
 function yieldToBrowser() {
