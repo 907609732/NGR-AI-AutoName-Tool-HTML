@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.9 module: uploads-editor-translator.js */
+/* NGRAI AutoName Tool V2.10 module: uploads-editor-translator.js */
 function bindUploads() {
   els.folderInput.addEventListener("change", (event) => addFiles([...event.target.files]));
   els.singleInput.addEventListener("change", (event) => addFiles([...event.target.files]));
@@ -278,6 +278,7 @@ function readEntryFiles(entry) {
 function bindEditor() {
   els.runNaming.addEventListener("click", runNaming);
   els.runLocalNaming.addEventListener("click", runLocalNaming);
+  els.runTranslateNaming.addEventListener("click", runTranslateNaming);
   els.stopNaming.addEventListener("click", stopNaming);
   els.applySuffix.addEventListener("click", applyBatchSuffix);
   els.applySequence.addEventListener("click", applyBatchSequence);

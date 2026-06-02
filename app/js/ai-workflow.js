@@ -1,22 +1,30 @@
-/* NGRAI AutoName Tool V2.9 module: ai-workflow.js */
+/* NGRAI AutoName Tool V2.10 module: ai-workflow.js */
 async function runNaming() {
   return runNamingWorkflow({ useAi: true });
 }
 
 async function runLocalNaming() {
-  return runNamingWorkflow({ useAi: false });
+  return runNamingWorkflow({ useAi: false, useExternalTranslation: false });
 }
 
-async function runNamingWorkflow({ useAi }) {
+async function runTranslateNaming() {
+  return runNamingWorkflow({ useAi: false, useExternalTranslation: true });
+}
+
+async function runNamingWorkflow({ useAi, useExternalTranslation = false }) {
   if (!assets.length) {
     showToast("请先上传切图文件");
     return;
   }
   const apiKey = aiSettings.apiKey.trim();
   const shouldUseAi = useAi && Boolean(apiKey);
+  const shouldUseExternalTranslation = !shouldUseAi && useExternalTranslation && translationSettings.provider !== "local";
   const knowledge = parseKnowledge();
-  const progressLabel = shouldUseAi ? "AI 命名中 " : "本地命名中 ";
-  const progressStep = shouldUseAi ? 1 : 250;
+  const progressLabel = shouldUseAi ? "AI 命名中 " : shouldUseExternalTranslation ? "翻译命名中 " : "本地命名中 ";
+  const progressStep = shouldUseAi ? 1 : shouldUseExternalTranslation ? 10 : 250;
+  if (useExternalTranslation && translationSettings.provider === "local") {
+    showToast("当前翻译方式为本地词库，将按离线本地知识库命名");
+  }
   stopRequested = false;
   assets.forEach((asset) => {
     asset.namingStatus = "pending";
@@ -30,7 +38,7 @@ async function runNamingWorkflow({ useAi }) {
   for (let index = 0; index < assets.length; index += 1) {
     if (stopRequested) break;
     const asset = assets[index];
-    const localRecommendations = shouldUseAi ? makeRecommendations(asset, knowledge) : await makeRecommendationsWithTranslation(asset, knowledge, { allowExternal: false });
+    const localRecommendations = shouldUseAi ? makeRecommendations(asset, knowledge) : await makeRecommendationsWithTranslation(asset, knowledge, { allowExternal: shouldUseExternalTranslation });
     let recommendations = localRecommendations;
     asset.namingStatus = "running";
     asset.statusMessage = "正在处理第 " + (index + 1) + " 张";
@@ -48,7 +56,7 @@ async function runNamingWorkflow({ useAi }) {
       asset.recommendations = recommendations.length ? recommendations : localRecommendations;
       asset.finalBaseName = asset.finalBaseName || asset.recommendations[0];
       asset.namingStatus = "done";
-      asset.statusMessage = shouldUseAi ? "AI 命名完成" : "本地知识库完成";
+      asset.statusMessage = shouldUseAi ? "AI 命名完成" : shouldUseExternalTranslation ? "翻译 API 命名完成" : "本地知识库完成";
       processedAssets.push(asset);
     } catch (error) {
       if (stopRequested || error.name === "AbortError") {
@@ -59,7 +67,7 @@ async function runNamingWorkflow({ useAi }) {
       asset.recommendations = localRecommendations;
       asset.finalBaseName = asset.finalBaseName || localRecommendations[0];
       asset.namingStatus = "failed";
-      asset.statusMessage = "AI 失败，已使用本地推荐";
+      asset.statusMessage = shouldUseAi ? "AI 失败，已使用本地推荐" : "翻译 API 失败，已使用本地推荐";
       processedAssets.push(asset);
     }
     setRunButtonLoading(true, progressLabel + (index + 1) + "/" + assets.length);
@@ -73,7 +81,7 @@ async function runNamingWorkflow({ useAi }) {
   applySemanticSequenceNumbers(processedAssets);
   setRunButtonLoading(false);
   renderAssetList();
-  showToast(stopRequested ? "已终止命名" : shouldUseAi ? "AI 推荐命名已完成" : "已使用本地知识库生成推荐名称");
+  showToast(stopRequested ? "已终止命名" : shouldUseAi ? "AI 推荐命名已完成" : shouldUseExternalTranslation ? "已使用翻译 API 生成推荐名称" : "已使用本地知识库生成推荐名称");
 }
 
 function yieldToBrowser() {
@@ -84,6 +92,7 @@ function setRunButtonLoading(isLoading, label = "运行 AI 命名") {
   els.runNaming.disabled = isLoading;
   els.runNaming.textContent = label;
   els.runLocalNaming.disabled = isLoading;
+  els.runTranslateNaming.disabled = isLoading;
   els.stopNaming.disabled = false;
   els.stopNaming.textContent = "终止命名";
   els.stopNaming.classList.toggle("hidden", !isLoading);

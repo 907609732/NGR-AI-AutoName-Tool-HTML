@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.9 module: state-dom.js */
+/* NGRAI AutoName Tool V2.10 module: state-dom.js */
 let projects;
 let activeProjectId;
 let schemes;
@@ -121,6 +121,7 @@ const els = {
   fileCount: document.querySelector("#fileCount"),
   runNaming: document.querySelector("#runNaming"),
   runLocalNaming: document.querySelector("#runLocalNaming"),
+  runTranslateNaming: document.querySelector("#runTranslateNaming"),
   stopNaming: document.querySelector("#stopNaming"),
   exportFiles: document.querySelector("#exportFiles"),
   batchSuffix: document.querySelector("#batchSuffix"),

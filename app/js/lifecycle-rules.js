@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.9 module: lifecycle-rules.js */
+/* NGRAI AutoName Tool V2.10 module: lifecycle-rules.js */
 function init() {
   bindNavigation();
   bindRules();
@@ -99,7 +99,7 @@ const guideSteps = [
     view: "work",
     selector: ".work-toolbar .toolbar-actions",
     title: "运行命名",
-    text: "可以运行 AI 命名，也可以只用本地知识库命名。命名过程中可随时终止。",
+    text: "可以运行视觉 AI 命名、极速本地知识库命名，也可以用翻译 API 逐张翻译文件名。命名过程中可随时终止。",
   },
   {
     view: "work",
