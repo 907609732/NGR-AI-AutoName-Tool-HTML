@@ -901,14 +901,31 @@ button:disabled {
 }
 
 .batch-actions-line {
-  display: flex;
-  justify-content: stretch;
+  grid-column: span 2;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(128px, 1fr));
   gap: 10px;
+  min-width: 0;
 }
 
 .batch-actions-line button {
   min-width: 0;
   width: 100%;
+  white-space: nowrap;
+}
+
+#problemFilter {
+  border-color: #e6c44f;
+  background: #fff8df;
+  color: #9a6a00;
+}
+
+#problemFilter:hover,
+#problemFilter:focus-visible,
+#problemFilter[aria-pressed="true"] {
+  border-color: #d79b18;
+  background: #ffeaa3;
+  color: #7a4f00;
 }
 
 .toast {
@@ -956,6 +973,10 @@ button:disabled {
 
   .work-view .toolbar-actions {
     margin-top: 8px;
+  }
+
+  .batch-actions-line {
+    grid-column: 1;
   }
 }
 
