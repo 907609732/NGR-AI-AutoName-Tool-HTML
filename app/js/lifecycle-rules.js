@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.8 module: lifecycle-rules.js */
+/* NGRAI AutoName Tool V2.9 module: lifecycle-rules.js */
 function init() {
   bindNavigation();
   bindRules();

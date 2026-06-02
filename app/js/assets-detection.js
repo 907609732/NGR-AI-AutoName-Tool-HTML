@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.8 module: assets-detection.js */
+/* NGRAI AutoName Tool V2.9 module: assets-detection.js */
 function applyBatchSuffix() {
   const suffix = sanitizeName(els.batchSuffix.value);
   if (!suffix) {

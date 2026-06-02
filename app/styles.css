@@ -841,7 +841,7 @@ button:disabled {
 }
 
 .naming-batch-tools {
-  grid-template-columns: minmax(120px, 0.7fr) minmax(170px, 1fr) minmax(150px, 0.9fr) minmax(210px, 0.95fr) minmax(170px, 0.75fr) minmax(160px, 0.8fr) minmax(150px, 0.7fr) minmax(160px, 0.75fr) minmax(150px, 0.75fr);
+  grid-template-columns: minmax(96px, 0.45fr) minmax(170px, 1fr) minmax(150px, 0.9fr) minmax(190px, 0.9fr) minmax(112px, 0.38fr) minmax(160px, 0.8fr) minmax(150px, 0.7fr);
 }
 
 .suffix-apply-field {
@@ -872,6 +872,21 @@ button:disabled {
   border-radius: 0 8px 8px 0;
   background: #f8fbfc;
   white-space: nowrap;
+}
+
+.sequence-field .suffix-apply-group {
+  grid-template-columns: 64px auto;
+}
+
+.batch-actions-line {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.batch-actions-line button {
+  min-width: 150px;
 }
 
 .toast {
@@ -1048,6 +1063,8 @@ button:disabled {
   row-gap: 4px;
   min-width: 0;
   padding-top: 0;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .meta-line {
@@ -1112,7 +1129,7 @@ button:disabled {
 
 .inline-name-row {
   display: grid;
-  grid-template-columns: minmax(170px, 0.95fr) minmax(170px, 0.95fr) minmax(170px, 0.95fr) minmax(220px, 0.8fr);
+  grid-template-columns: minmax(116px, 0.5fr) minmax(190px, 1fr) minmax(170px, 0.85fr) minmax(180px, 0.65fr);
   gap: 8px;
   min-width: 0;
 }
@@ -1131,6 +1148,10 @@ button:disabled {
 .inline-prefix select {
   height: 30px;
   min-width: 0;
+}
+
+.inline-prefix-choice {
+  grid-template-columns: 44px minmax(72px, 118px);
 }
 
 .inline-prefix span,
@@ -1274,6 +1295,10 @@ button:disabled {
   margin-top: 0;
 }
 
+.inline-final-compact {
+  grid-template-columns: 56px minmax(0, 1fr);
+}
+
 .compact-list-mode .asset-item {
   grid-template-columns: 22px 104px minmax(260px, 0.9fr) minmax(360px, 1.5fr);
   min-height: 116px;
@@ -1298,7 +1323,7 @@ button:disabled {
 }
 
 .compact-list-mode .inline-name-row {
-  grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr) minmax(150px, 1fr) minmax(180px, 0.75fr);
+  grid-template-columns: minmax(110px, 0.55fr) minmax(170px, 1fr) minmax(150px, 0.85fr) minmax(160px, 0.7fr);
 }
 
 .compact-list-mode .inline-prefix,

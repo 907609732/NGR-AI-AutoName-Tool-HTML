@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.8 module: ai-workflow.js */
+/* NGRAI AutoName Tool V2.9 module: ai-workflow.js */
 async function runNaming() {
   return runNamingWorkflow({ useAi: true });
 }
@@ -16,7 +16,7 @@ async function runNamingWorkflow({ useAi }) {
   const shouldUseAi = useAi && Boolean(apiKey);
   const knowledge = parseKnowledge();
   const progressLabel = shouldUseAi ? "AI 命名中 " : "本地命名中 ";
-  const progressStep = shouldUseAi ? 1 : 20;
+  const progressStep = shouldUseAi ? 1 : 250;
   stopRequested = false;
   assets.forEach((asset) => {
     asset.namingStatus = "pending";
@@ -30,7 +30,7 @@ async function runNamingWorkflow({ useAi }) {
   for (let index = 0; index < assets.length; index += 1) {
     if (stopRequested) break;
     const asset = assets[index];
-    const localRecommendations = shouldUseAi ? makeRecommendations(asset, knowledge) : await makeRecommendationsWithTranslation(asset, knowledge);
+    const localRecommendations = shouldUseAi ? makeRecommendations(asset, knowledge) : await makeRecommendationsWithTranslation(asset, knowledge, { allowExternal: false });
     let recommendations = localRecommendations;
     asset.namingStatus = "running";
     asset.statusMessage = "正在处理第 " + (index + 1) + " 张";

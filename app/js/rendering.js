@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.8 module: rendering.js */
+/* NGRAI AutoName Tool V2.9 module: rendering.js */
 function renderAssetList() {
   const problemCount = assets.filter((asset) => asset.dimensionIssue).length;
   els.fileCount.textContent = assets.length + " 张" + (problemCount ? " / " + problemCount + " 张问题" : "");
@@ -25,7 +25,8 @@ function renderAssetList() {
   renderedAssets.forEach((asset) => {
     const row = document.createElement("div");
     row.className = "asset-item" + (asset.dimensionIssue ? " has-issue" : asset.dimensionWarning ? " has-warning" : "") + (asset.id === selectedId ? " active" : "");
-    row.addEventListener("click", () => {
+    row.addEventListener("click", (event) => {
+      if (event.target.closest(".asset-meta") && window.getSelection?.().toString().trim()) return;
       selectedId = asset.id;
       renderAssetList();
     });
@@ -76,7 +77,7 @@ function renderAssetList() {
     nameRow.className = "inline-name-row";
 
     const prefix = document.createElement("label");
-    prefix.className = "inline-prefix";
+    prefix.className = "inline-prefix inline-prefix-choice";
     const prefixLabel = document.createElement("span");
     prefixLabel.textContent = "前缀名";
     const prefixInput = document.createElement("select");
@@ -158,6 +159,7 @@ function renderAssetList() {
 
     const finalLabel = document.createElement("label");
     finalLabel.className = "inline-final-name";
+    finalLabel.classList.add("inline-final-compact");
     const finalText = document.createElement("span");
     finalText.textContent = "最终名称";
     const finalField = document.createElement("div");

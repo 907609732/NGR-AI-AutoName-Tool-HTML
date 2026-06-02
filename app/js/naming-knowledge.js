@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.8 module: naming-knowledge.js */
+/* NGRAI AutoName Tool V2.9 module: naming-knowledge.js */
 function makeRecommendations(asset, cachedKnowledge, translatedOverride = "") {
   const source = normalizeSourceName(asset.originalBase);
   const knowledge = cachedKnowledge || parseKnowledge();
@@ -16,10 +16,10 @@ function makeRecommendations(asset, cachedKnowledge, translatedOverride = "") {
   return [...new Set(candidates.map(removeProjectTermsFromName).map(formatNamingName).filter((name) => name && !containsChinese(name)))].slice(0, 5);
 }
 
-async function makeRecommendationsWithTranslation(asset, cachedKnowledge) {
+async function makeRecommendationsWithTranslation(asset, cachedKnowledge, options = {}) {
   const source = normalizeSourceName(asset.originalBase);
   const knowledge = cachedKnowledge || parseKnowledge();
-  const translatedSource = await translateFilenameSmart(source, knowledge);
+  const translatedSource = await translateFilenameSmart(source, knowledge, options);
   return makeRecommendations(asset, knowledge, translatedSource);
 }
 
@@ -235,10 +235,10 @@ function translateFilename(source, knowledge, options = {}) {
   return "";
 }
 
-async function translateFilenameSmart(source, knowledge) {
+async function translateFilenameSmart(source, knowledge, options = {}) {
   const strictName = translateFilename(source, knowledge, { allowPinyin: false });
   const pinyinName = translateFilename(source, knowledge, { allowPinyin: true });
-  if (!containsChinese(source) || translationSettings.provider === "local" || strictName === pinyinName) {
+  if (options.allowExternal === false || !containsChinese(source) || translationSettings.provider === "local" || strictName === pinyinName) {
     return pinyinName || strictName;
   }
   try {
