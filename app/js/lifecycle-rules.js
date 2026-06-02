@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.10 module: lifecycle-rules.js */
+/* NGRAI AutoName Tool V2.11 module: lifecycle-rules.js */
 function init() {
   bindNavigation();
   bindRules();
@@ -7,8 +7,7 @@ function init() {
   bindDetection();
   bindTranslator();
   protectEditableShortcuts();
-  fillListDisplayMode();
-  fillListSortMode();
+  fillListViewSortMode();
   fillRulesForm();
   fillDetectionProfileForm();
   fillAiSettings();
@@ -99,7 +98,7 @@ const guideSteps = [
     view: "work",
     selector: ".work-toolbar .toolbar-actions",
     title: "运行命名",
-    text: "可以运行视觉 AI 命名、极速本地知识库命名，也可以用翻译 API 逐张翻译文件名。命名过程中可随时终止。",
+    text: "先选择命名模式，再点击运行按钮。支持百度翻译 API、本地知识库和 AI 视觉命名，命名过程中可随时终止。",
   },
   {
     view: "work",

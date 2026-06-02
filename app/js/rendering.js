@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.10 module: rendering.js */
+/* NGRAI AutoName Tool V2.11 module: rendering.js */
 function renderAssetList() {
   const problemCount = assets.filter((asset) => asset.dimensionIssue).length;
   els.fileCount.textContent = assets.length + " 张" + (problemCount ? " / " + problemCount + " 张问题" : "");
@@ -260,16 +260,12 @@ function buildDuplicateStatusContext() {
   return { counts, historicalMatch, historicalNames };
 }
 
-function fillListDisplayMode() {
-  els.listDisplayMode.value = listDisplayMode;
-}
-
 function loadListDisplayMode() {
   return localStorage.getItem(LIST_DISPLAY_MODE_KEY) === "compact" ? "compact" : "full";
 }
 
-function fillListSortMode() {
-  els.listSortMode.value = listSortMode;
+function fillListViewSortMode() {
+  els.listViewSortMode.value = listDisplayMode + ":" + listSortMode;
 }
 
 function loadListSortMode() {
@@ -277,7 +273,15 @@ function loadListSortMode() {
 }
 
 function normalizeListSortMode(mode) {
-  return ["upload", "name-asc", "name-desc"].includes(mode) ? mode : "upload";
+  return ["upload", "name-asc", "name-desc"].includes(mode) ? mode : "name-asc";
+}
+
+function parseListViewSortMode(value) {
+  const [displayMode, sortMode] = String(value || "").split(":");
+  return {
+    displayMode: displayMode === "compact" ? "compact" : "full",
+    sortMode: normalizeListSortMode(sortMode),
+  };
 }
 
 function getVisibleAssets() {

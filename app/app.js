@@ -1,1 +1,1 @@
-/* NGRAI AutoName Tool V2.10: source has been split into js/*.js modules. Entry point: js/main.js */
+/* NGRAI AutoName Tool V2.11: source has been split into js/*.js modules. Entry point: js/main.js */

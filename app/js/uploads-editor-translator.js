@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.10 module: uploads-editor-translator.js */
+/* NGRAI AutoName Tool V2.11 module: uploads-editor-translator.js */
 function bindUploads() {
   els.folderInput.addEventListener("change", (event) => addFiles([...event.target.files]));
   els.singleInput.addEventListener("change", (event) => addFiles([...event.target.files]));
@@ -276,25 +276,23 @@ function readEntryFiles(entry) {
 }
 
 function bindEditor() {
-  els.runNaming.addEventListener("click", runNaming);
-  els.runLocalNaming.addEventListener("click", runLocalNaming);
-  els.runTranslateNaming.addEventListener("click", runTranslateNaming);
+  els.namingModeSelect.addEventListener("change", updateNamingRunButton);
+  els.runSelectedNaming.addEventListener("click", runSelectedNaming);
   els.stopNaming.addEventListener("click", stopNaming);
-  els.applySuffix.addEventListener("click", applyBatchSuffix);
-  els.applySequence.addEventListener("click", applyBatchSequence);
+  els.batchOperationMode.addEventListener("change", syncBatchOperationMode);
+  els.applyBatchOperation.addEventListener("click", applyBatchOperation);
   els.problemFilter.addEventListener("click", toggleProblemFilter);
   els.removeSelected.addEventListener("click", removeSelectedAssets);
   els.exportFiles.addEventListener("click", exportRenamedFiles);
-  els.listDisplayMode.addEventListener("change", () => {
-    listDisplayMode = els.listDisplayMode.value === "compact" ? "compact" : "full";
+  els.listViewSortMode.addEventListener("change", () => {
+    const next = parseListViewSortMode(els.listViewSortMode.value);
+    listDisplayMode = next.displayMode;
+    listSortMode = next.sortMode;
     assetRenderLimit = ASSET_RENDER_BATCH_SIZE;
     localStorage.setItem(LIST_DISPLAY_MODE_KEY, listDisplayMode);
-    renderAssetList();
-  });
-  els.listSortMode.addEventListener("change", () => {
-    listSortMode = normalizeListSortMode(els.listSortMode.value);
-    assetRenderLimit = ASSET_RENDER_BATCH_SIZE;
     localStorage.setItem(LIST_SORT_MODE_KEY, listSortMode);
     renderAssetList();
   });
+  updateNamingRunButton();
+  syncBatchOperationMode();
 }

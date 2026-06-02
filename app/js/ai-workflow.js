@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.10 module: ai-workflow.js */
+/* NGRAI AutoName Tool V2.11 module: ai-workflow.js */
 async function runNaming() {
   return runNamingWorkflow({ useAi: true });
 }
@@ -9,6 +9,22 @@ async function runLocalNaming() {
 
 async function runTranslateNaming() {
   return runNamingWorkflow({ useAi: false, useExternalTranslation: true });
+}
+
+async function runSelectedNaming() {
+  const mode = els.namingModeSelect.value || "translate";
+  if (mode === "ai") return runNaming();
+  if (mode === "local") return runLocalNaming();
+  return runTranslateNaming();
+}
+
+function updateNamingRunButton() {
+  const labels = {
+    translate: "运行百度翻译API命名",
+    local: "运行本地知识库命名",
+    ai: "运行AI视觉命名",
+  };
+  els.runSelectedNaming.textContent = labels[els.namingModeSelect.value] || labels.translate;
 }
 
 async function runNamingWorkflow({ useAi, useExternalTranslation = false }) {
@@ -88,11 +104,11 @@ function yieldToBrowser() {
   return new Promise((resolve) => requestAnimationFrame(() => resolve()));
 }
 
-function setRunButtonLoading(isLoading, label = "运行 AI 命名") {
-  els.runNaming.disabled = isLoading;
-  els.runNaming.textContent = label;
-  els.runLocalNaming.disabled = isLoading;
-  els.runTranslateNaming.disabled = isLoading;
+function setRunButtonLoading(isLoading, label = "") {
+  els.namingModeSelect.disabled = isLoading;
+  els.runSelectedNaming.disabled = isLoading;
+  if (isLoading) els.runSelectedNaming.textContent = label;
+  else updateNamingRunButton();
   els.stopNaming.disabled = false;
   els.stopNaming.textContent = "终止命名";
   els.stopNaming.classList.toggle("hidden", !isLoading);

@@ -483,6 +483,10 @@ button:disabled {
   height: 42px;
 }
 
+.naming-mode-field {
+  grid-template-columns: auto minmax(160px, 190px);
+}
+
 .primary-action,
 .success-action,
 .ghost-action,
@@ -841,7 +845,7 @@ button:disabled {
 }
 
 .naming-batch-tools {
-  grid-template-columns: minmax(96px, 0.45fr) minmax(170px, 1fr) minmax(150px, 0.9fr) minmax(190px, 0.9fr) minmax(112px, 0.38fr) minmax(160px, 0.8fr) minmax(150px, 0.7fr);
+  grid-template-columns: minmax(96px, 0.45fr) minmax(170px, 1fr) minmax(150px, 0.9fr) minmax(280px, 1.15fr) minmax(210px, 0.95fr);
 }
 
 .suffix-apply-field {
@@ -853,29 +857,40 @@ button:disabled {
   gap: 8px;
 }
 
-.suffix-apply-group {
+.suffix-apply-group,
+.batch-operation-group {
   display: grid;
   grid-template-columns: minmax(64px, 1fr) auto;
   align-items: stretch;
   min-width: 0;
 }
 
-.suffix-apply-group input {
+.batch-operation-group {
+  grid-template-columns: minmax(96px, 0.75fr) minmax(76px, 1fr) auto;
+}
+
+.suffix-apply-group input,
+.batch-operation-group input,
+.batch-operation-group select {
   min-width: 0;
+}
+
+.batch-operation-group input {
+  border-radius: 0;
+}
+
+.batch-operation-group select {
   border-radius: 8px 0 0 8px;
 }
 
-.suffix-apply-group .ghost-action {
+.suffix-apply-group .ghost-action,
+.batch-operation-group .ghost-action {
   min-width: 52px;
   padding: 0 8px;
   border-left: 0;
   border-radius: 0 8px 8px 0;
   background: #f8fbfc;
   white-space: nowrap;
-}
-
-.sequence-field .suffix-apply-group {
-  grid-template-columns: 64px auto;
 }
 
 .batch-actions-line {

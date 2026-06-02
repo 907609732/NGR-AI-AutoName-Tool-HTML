@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.10 module: state-dom.js */
+/* NGRAI AutoName Tool V2.11 module: state-dom.js */
 let projects;
 let activeProjectId;
 let schemes;
@@ -119,17 +119,15 @@ const els = {
   referenceName: document.querySelector("#referenceName"),
   assetList: document.querySelector("#assetList"),
   fileCount: document.querySelector("#fileCount"),
-  runNaming: document.querySelector("#runNaming"),
-  runLocalNaming: document.querySelector("#runLocalNaming"),
-  runTranslateNaming: document.querySelector("#runTranslateNaming"),
+  namingModeSelect: document.querySelector("#namingModeSelect"),
+  runSelectedNaming: document.querySelector("#runSelectedNaming"),
   stopNaming: document.querySelector("#stopNaming"),
   exportFiles: document.querySelector("#exportFiles"),
+  batchOperationMode: document.querySelector("#batchOperationMode"),
   batchSuffix: document.querySelector("#batchSuffix"),
   batchSequenceStart: document.querySelector("#batchSequenceStart"),
-  listDisplayMode: document.querySelector("#listDisplayMode"),
-  listSortMode: document.querySelector("#listSortMode"),
-  applySuffix: document.querySelector("#applySuffix"),
-  applySequence: document.querySelector("#applySequence"),
+  applyBatchOperation: document.querySelector("#applyBatchOperation"),
+  listViewSortMode: document.querySelector("#listViewSortMode"),
   problemFilter: document.querySelector("#problemFilter"),
   removeSelected: document.querySelector("#removeSelected"),
   detectionProfileSelect: document.querySelector("#detectionProfileSelect"),

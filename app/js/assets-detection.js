@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.10 module: assets-detection.js */
+/* NGRAI AutoName Tool V2.11 module: assets-detection.js */
 function applyBatchSuffix() {
   const suffix = sanitizeName(els.batchSuffix.value);
   if (!suffix) {
@@ -29,6 +29,17 @@ function applyBatchSequence() {
   });
   renderAssetList();
   showToast("已给 " + targets.length + " 张图片添加序号");
+}
+
+function applyBatchOperation() {
+  if (els.batchOperationMode.value === "sequence") return applyBatchSequence();
+  return applyBatchSuffix();
+}
+
+function syncBatchOperationMode() {
+  const isSequence = els.batchOperationMode.value === "sequence";
+  els.batchSuffix.classList.toggle("hidden", isSequence);
+  els.batchSequenceStart.classList.toggle("hidden", !isSequence);
 }
 
 function removeSelectedAssets() {
