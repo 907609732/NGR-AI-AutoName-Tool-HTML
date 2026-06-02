@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.12 module: main.js */
+/* NGRAI AutoName Tool V2.13 module: main.js */
 resetAppLocalStorageOnVersionChange();
 bootstrapState();
 init();

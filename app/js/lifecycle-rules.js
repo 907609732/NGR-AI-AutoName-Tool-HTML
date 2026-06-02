@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.12 module: lifecycle-rules.js */
+/* NGRAI AutoName Tool V2.13 module: lifecycle-rules.js */
 function init() {
   bindNavigation();
   bindRules();
@@ -90,9 +90,9 @@ const guideSteps = [
   },
   {
     view: "work",
-    selector: ".job-config",
+    selector: ".naming-batch-tools",
     title: "填写当前界面命名参数",
-    text: "这里控制当前批次的前缀、工程名、界面名、后缀和序号。工程名只使用你填写的内容。",
+    text: "这里控制当前批次的前缀、工程名、界面名、批量操作和列表显示。工程名只使用你填写的内容。",
   },
   {
     view: "work",
