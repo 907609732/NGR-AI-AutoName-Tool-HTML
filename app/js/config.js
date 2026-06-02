@@ -1,5 +1,5 @@
-/* NGRAI AutoName Tool V2.14 module: config.js */
-const APP_VERSION = "V2.14";
+/* NGRAI AutoName Tool V2.15 module: config.js */
+const APP_VERSION = "V2.15";
 const APP_VERSION_KEY = "ngr-ai-autoname-app-version";
 const STORAGE_KEY = "ngr-ai-autoname-rules";
 const SCHEME_KEY = "ngr-ai-autoname-rule-schemes";

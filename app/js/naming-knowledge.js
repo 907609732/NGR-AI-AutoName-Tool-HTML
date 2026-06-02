@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.14 module: naming-knowledge.js */
+/* NGRAI AutoName Tool V2.15 module: naming-knowledge.js */
 let meaningQueue = [];
 let meaningQueueActive = 0;
 
