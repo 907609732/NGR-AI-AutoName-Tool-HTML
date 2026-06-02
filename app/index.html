@@ -11,9 +11,10 @@
       <header class="topbar">
         <button class="back-button hidden" id="backButton" type="button" aria-label="返回主界面">←</button>
         <div class="topbar-title">
-          <h1>NGRAI辅助UI切图命名工具 <span class="version-badge">V2.7</span></h1>
+          <h1>NGRAI辅助UI切图命名工具 <span class="version-badge">V2.8</span></h1>
           <p id="pageHint">批量整理 UI 切图名称，让文件名保持统一、清楚、可追踪。</p>
         </div>
+        <button class="settings-button guide-button" id="guideEntry" type="button" aria-label="操作指引" title="操作指引">?</button>
         <button class="settings-button" id="rulesEntry" type="button" aria-label="命名规则设置" title="命名规则设置">⚙</button>
       </header>
 
@@ -36,7 +37,7 @@
 
         <section class="view rules-view" id="rulesView">
           <div class="section-head">
-            <h2>命名规则 <span class="version-badge">V2.7</span></h2>
+            <h2>命名规则 <span class="version-badge">V2.8</span></h2>
             <p>这些设置会自动保存，并在命名流程中作为全局前缀使用。</p>
           </div>
 
@@ -508,30 +509,31 @@
                 <option value="model">OpenAI兼容文本模型</option>
               </select>
             </label>
-            <label>
+            <label data-provider-group="baidu">
               <span>百度 App ID</span>
               <input id="baiduTranslateAppId" type="text" placeholder="请输入百度翻译 App ID" />
             </label>
-            <label>
+            <label data-provider-group="baidu">
               <span>百度密钥</span>
               <input id="baiduTranslateSecret" type="password" placeholder="请输入百度翻译密钥" />
             </label>
-            <label>
+            <label data-provider-group="baidu">
               <span>接口地址</span>
               <input id="baiduTranslateEndpoint" type="text" placeholder="https://fanyi-api.baidu.com/api/trans/vip/translate" />
             </label>
-            <label>
+            <label data-provider-group="model">
               <span>模型接口地址</span>
               <input id="textTranslateBaseUrl" type="text" placeholder="https://api.openai.com/v1" />
             </label>
-            <label>
+            <label data-provider-group="model">
               <span>模型 API Key</span>
               <input id="textTranslateApiKey" type="password" placeholder="请输入文本翻译模型 API Key" />
             </label>
-            <label>
+            <label data-provider-group="model">
               <span>模型名称</span>
               <input id="textTranslateModel" type="text" placeholder="例如：gpt-4.1-mini" />
             </label>
+            <p class="translator-provider-note" data-provider-group="local">当前使用本地词库和拼音兜底，不需要额外 API。</p>
             <div class="translator-settings-actions">
               <button id="saveTranslatorSettings" class="primary-action" type="button">保存翻译设置</button>
               <button id="testTranslatorSettings" class="ghost-action" type="button">测试 API</button>
@@ -547,6 +549,20 @@
           <div class="translator-output" id="translatorOutput">展开后可快速翻译中文文件名或解释英文命名。</div>
         </div>
       </aside>
+
+      <div class="guide-overlay hidden" id="guideOverlay" aria-hidden="true">
+        <div class="guide-highlight" id="guideHighlight"></div>
+        <section class="guide-popover" id="guidePopover" role="dialog" aria-modal="true" aria-labelledby="guideTitle">
+          <div class="guide-step-count" id="guideStepCount">1 / 8</div>
+          <h2 id="guideTitle">操作指引</h2>
+          <p id="guideText">按照步骤熟悉工具的主要流程。</p>
+          <div class="guide-actions">
+            <button id="guidePrev" class="ghost-action" type="button">上一步</button>
+            <button id="guideNext" class="primary-action" type="button">下一步</button>
+            <button id="guideClose" class="danger-action" type="button">结束</button>
+          </div>
+        </section>
+      </div>
 
       <div id="toast" class="toast hidden" role="status"></div>
     </div>

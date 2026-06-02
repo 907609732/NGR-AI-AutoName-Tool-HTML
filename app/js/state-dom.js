@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.7 module: state-dom.js */
+/* NGRAI AutoName Tool V2.8 module: state-dom.js */
 let projects;
 let activeProjectId;
 let schemes;
@@ -24,6 +24,7 @@ let knowledgeCacheKey;
 let knowledgeCacheValue;
 let assetRenderLimit;
 let detectionRenderLimit;
+let guideStepIndex;
 
 function bootstrapState() {
   projects = loadProjects();
@@ -51,6 +52,7 @@ function bootstrapState() {
   knowledgeCacheValue = null;
   assetRenderLimit = ASSET_RENDER_BATCH_SIZE;
   detectionRenderLimit = DETECTION_RENDER_BATCH_SIZE;
+  guideStepIndex = 0;
 }
 
 const els = {
@@ -64,6 +66,7 @@ const els = {
     detectionSettings: document.querySelector("#detectionSettingsView"),
   },
   rulesEntry: document.querySelector("#rulesEntry"),
+  guideEntry: document.querySelector("#guideEntry"),
   workEntry: document.querySelector("#workEntry"),
   detectEntry: document.querySelector("#detectEntry"),
   projectSelect: document.querySelector("#projectSelect"),
@@ -162,6 +165,7 @@ const els = {
   translatorSettingsToggle: document.querySelector("#translatorSettingsToggle"),
   translatorSettings: document.querySelector("#translatorSettings"),
   translatorProvider: document.querySelector("#translatorProvider"),
+  translatorProviderGroups: document.querySelectorAll("[data-provider-group]"),
   baiduTranslateAppId: document.querySelector("#baiduTranslateAppId"),
   baiduTranslateSecret: document.querySelector("#baiduTranslateSecret"),
   baiduTranslateEndpoint: document.querySelector("#baiduTranslateEndpoint"),
@@ -175,5 +179,14 @@ const els = {
   translatorApplyName: document.querySelector("#translatorApplyName"),
   translatorExplain: document.querySelector("#translatorExplain"),
   translatorOutput: document.querySelector("#translatorOutput"),
+  guideOverlay: document.querySelector("#guideOverlay"),
+  guideHighlight: document.querySelector("#guideHighlight"),
+  guidePopover: document.querySelector("#guidePopover"),
+  guideStepCount: document.querySelector("#guideStepCount"),
+  guideTitle: document.querySelector("#guideTitle"),
+  guideText: document.querySelector("#guideText"),
+  guidePrev: document.querySelector("#guidePrev"),
+  guideNext: document.querySelector("#guideNext"),
+  guideClose: document.querySelector("#guideClose"),
   toast: document.querySelector("#toast"),
 };

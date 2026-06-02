@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.7 module: lifecycle-rules.js */
+/* NGRAI AutoName Tool V2.8 module: lifecycle-rules.js */
 function init() {
   bindNavigation();
   bindRules();
@@ -35,12 +35,25 @@ function protectEditableShortcuts(root = document) {
 }
 
 function bindNavigation() {
+  els.guideEntry.addEventListener("click", startGuideTour);
   els.rulesEntry.addEventListener("click", () => showView("rules"));
   els.workEntry.addEventListener("click", () => showView("work"));
   els.detectEntry.addEventListener("click", () => showView("detect"));
   els.detectionSettingsEntry?.addEventListener("click", () => showView("detectionSettings"));
   els.backToDetection.addEventListener("click", () => showView("detect"));
   els.backButton.addEventListener("click", () => showView("home"));
+  els.guidePrev.addEventListener("click", () => moveGuideStep(-1));
+  els.guideNext.addEventListener("click", () => {
+    if (guideStepIndex === guideSteps.length - 1) closeGuideTour();
+    else moveGuideStep(1);
+  });
+  els.guideClose.addEventListener("click", closeGuideTour);
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !els.guideOverlay.classList.contains("hidden")) closeGuideTour();
+  });
+  window.addEventListener("resize", () => {
+    if (!els.guideOverlay.classList.contains("hidden")) showGuideStep(guideStepIndex);
+  });
 }
 
 function showView(name) {
@@ -55,6 +68,118 @@ function showView(name) {
     detectionSettings: "单独配置 UI 切图检测项目组和分辨率参数。",
   };
   els.pageHint.textContent = hints[name];
+}
+
+const guideSteps = [
+  {
+    view: "home",
+    selector: "#homeView",
+    title: "从主界面开始",
+    text: "这里是工具入口：开始命名用于批量改名，UI切图检测用于检查分辨率、格式和重复资源。",
+  },
+  {
+    view: "rules",
+    selector: "#rulesForm",
+    title: "配置项目和方案",
+    text: "在这里切换项目、项目配置方案、前缀和工程名。每个项目可以维护自己的知识库和命名规则。",
+  },
+  {
+    view: "work",
+    selector: "#uploadDropZone",
+    title: "上传切图和参考图",
+    text: "把文件夹拖进上传区域，或者补充上传单张图片；参考效果图会辅助 AI 理解界面语义。",
+  },
+  {
+    view: "work",
+    selector: ".job-config",
+    title: "填写当前界面命名参数",
+    text: "这里控制当前批次的前缀、工程名、界面名、后缀和序号。工程名只使用你填写的内容。",
+  },
+  {
+    view: "work",
+    selector: ".work-toolbar .toolbar-actions",
+    title: "运行命名",
+    text: "可以运行 AI 命名，也可以只用本地知识库命名。命名过程中可随时终止。",
+  },
+  {
+    view: "work",
+    selector: "#assetList",
+    title: "逐张确认最终名称",
+    text: "上传后图片会出现在这里。你可以查看推荐名、编辑最终名称、使用词库或筛选问题图片。",
+  },
+  {
+    view: "work",
+    selector: "#translatorPanel",
+    title: "使用翻译面板辅助命名",
+    text: "右侧翻译面板可以把中文文件名转成英文命名词，并一键填入当前选中图片的最终名称。",
+    beforeShow: () => els.translatorPanel.classList.remove("collapsed"),
+  },
+  {
+    view: "detect",
+    selector: "#detectionDropZone",
+    title: "检测切图规范",
+    text: "在 UI切图检测页上传资源，工具会检查格式、分辨率、警告项和问题图片。",
+  },
+];
+
+function startGuideTour() {
+  guideStepIndex = 0;
+  els.guideOverlay.classList.remove("hidden");
+  els.guideOverlay.setAttribute("aria-hidden", "false");
+  showGuideStep(guideStepIndex);
+}
+
+function moveGuideStep(direction) {
+  showGuideStep(guideStepIndex + direction);
+}
+
+function showGuideStep(nextIndex) {
+  const boundedIndex = Math.max(0, Math.min(nextIndex, guideSteps.length - 1));
+  const step = guideSteps[boundedIndex];
+  guideStepIndex = boundedIndex;
+  showView(step.view);
+  step.beforeShow?.();
+  window.setTimeout(() => positionGuideStep(step), 60);
+}
+
+function positionGuideStep(step) {
+  const target = document.querySelector(step.selector);
+  if (!target) {
+    if (guideStepIndex < guideSteps.length - 1) return showGuideStep(guideStepIndex + 1);
+    return closeGuideTour();
+  }
+  target.scrollIntoView({ behavior: "auto", block: "center", inline: "center" });
+  const rect = target.getBoundingClientRect();
+  const padding = 8;
+  els.guideHighlight.style.left = Math.max(8, rect.left - padding) + "px";
+  els.guideHighlight.style.top = Math.max(8, rect.top - padding) + "px";
+  els.guideHighlight.style.width = Math.min(window.innerWidth - 16, rect.width + padding * 2) + "px";
+  els.guideHighlight.style.height = Math.min(window.innerHeight - 16, rect.height + padding * 2) + "px";
+  els.guideTitle.textContent = step.title;
+  els.guideText.textContent = step.text;
+  els.guideStepCount.textContent = guideStepIndex + 1 + " / " + guideSteps.length;
+  els.guidePrev.disabled = guideStepIndex === 0;
+  els.guideNext.textContent = guideStepIndex === guideSteps.length - 1 ? "完成" : "下一步";
+  placeGuidePopover(rect);
+}
+
+function placeGuidePopover(rect) {
+  const popover = els.guidePopover;
+  const width = Math.min(360, window.innerWidth - 28);
+  popover.style.width = width + "px";
+  let left = rect.right + 18;
+  if (left + width > window.innerWidth - 14) left = rect.left - width - 18;
+  if (left < 14) left = (window.innerWidth - width) / 2;
+  let top = rect.top;
+  const popoverHeight = popover.offsetHeight || 210;
+  if (top + popoverHeight > window.innerHeight - 14) top = window.innerHeight - popoverHeight - 14;
+  popover.style.left = Math.max(14, left) + "px";
+  popover.style.top = Math.max(14, top) + "px";
+}
+
+function closeGuideTour() {
+  els.guideOverlay.classList.add("hidden");
+  els.guideOverlay.setAttribute("aria-hidden", "true");
 }
 
 function bindRules() {

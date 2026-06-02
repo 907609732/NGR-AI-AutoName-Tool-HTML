@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.7 module: uploads-editor-translator.js */
+/* NGRAI AutoName Tool V2.8 module: uploads-editor-translator.js */
 function bindUploads() {
   els.folderInput.addEventListener("change", (event) => addFiles([...event.target.files]));
   els.singleInput.addEventListener("change", (event) => addFiles([...event.target.files]));
@@ -107,6 +107,7 @@ function bindTranslator() {
   els.translatorSettingsToggle.addEventListener("click", () => {
     els.translatorSettings.classList.toggle("hidden");
   });
+  els.translatorProvider.addEventListener("change", syncTranslatorProviderFields);
   els.saveTranslatorSettings.addEventListener("click", () => {
     translationSettings = collectTranslationSettings();
     saveTranslationSettings(translationSettings);
@@ -129,6 +130,16 @@ function bindTranslator() {
     els.translatorOutput.textContent = source ? "翻译中..." : "请输入需要解释的英文命名";
     if (source) els.translatorOutput.textContent = await explainNameWithTranslation(source);
   });
+  syncTranslatorProviderFields();
+}
+
+function syncTranslatorProviderFields() {
+  const provider = els.translatorProvider.value || "local";
+  els.translatorProviderGroups.forEach((node) => {
+    const group = node.dataset.providerGroup;
+    node.classList.toggle("hidden", group !== provider);
+  });
+  els.testTranslatorSettings.classList.toggle("hidden", provider === "local");
 }
 
 async function applyTranslatorNameToSelectedAsset() {

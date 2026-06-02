@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.7 module: naming-knowledge.js */
+/* NGRAI AutoName Tool V2.8 module: naming-knowledge.js */
 function makeRecommendations(asset, cachedKnowledge, translatedOverride = "") {
   const source = normalizeSourceName(asset.originalBase);
   const knowledge = cachedKnowledge || parseKnowledge();

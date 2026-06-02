@@ -119,6 +119,11 @@ button {
   color: var(--primary);
 }
 
+.guide-button {
+  font-size: 18px;
+  font-weight: 900;
+}
+
 main {
   width: min(1780px, calc(100vw - 20px));
   margin: 0 auto;
@@ -1389,28 +1394,33 @@ button:disabled {
 
 .translator-panel {
   position: fixed;
-  right: 18px;
+  right: 14px;
   top: 50%;
   bottom: auto;
   transform: translateY(-50%);
   z-index: 30;
-  width: min(360px, calc(100vw - 36px));
+  width: min(380px, calc(100vw - 36px));
 }
 
 .translator-toggle {
   display: none;
-  width: 86px;
-  min-height: 40px;
+  width: 38px;
+  min-height: 92px;
   margin-left: auto;
   border: 1px solid var(--primary);
-  border-radius: 999px;
+  border-right: 0;
+  border-radius: 10px 0 0 10px;
   background: var(--primary);
   color: #fff;
   font-weight: 800;
+  writing-mode: vertical-rl;
+  letter-spacing: 0;
   box-shadow: 0 12px 28px rgba(23, 126, 137, 0.22);
 }
 
 .translator-body {
+  display: grid;
+  gap: 10px;
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -1420,6 +1430,7 @@ button:disabled {
 
 .translator-panel.collapsed {
   width: auto;
+  right: 0;
 }
 
 .translator-panel.collapsed .translator-toggle {
@@ -1431,11 +1442,11 @@ button:disabled {
 }
 
 .translator-head {
+  order: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
 }
 
 .translator-head-actions {
@@ -1452,9 +1463,9 @@ button:disabled {
 }
 
 .translator-settings {
+  order: 5;
   display: grid;
   gap: 8px;
-  margin-bottom: 10px;
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -1492,20 +1503,39 @@ button:disabled {
   line-height: 1.5;
 }
 
+.translator-provider-note {
+  margin: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .translator-body textarea {
+  order: 2;
   min-height: 92px;
   resize: vertical;
 }
 
 .translator-actions {
-  display: flex;
+  order: 3;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  margin-top: 10px;
+}
+
+.translator-actions button {
+  min-height: 38px;
+  padding: 0 10px;
+  font-size: 13px;
 }
 
 .translator-output {
+  order: 4;
   min-height: 44px;
-  margin-top: 10px;
   padding: 10px;
   border-radius: 8px;
   background: var(--surface-2);
@@ -1515,9 +1545,93 @@ button:disabled {
   overflow-wrap: anywhere;
 }
 
+.guide-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  pointer-events: auto;
+}
+
+.guide-highlight {
+  position: fixed;
+  border: 2px solid var(--primary);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 0 0 9999px rgba(10, 20, 24, 0.58), 0 12px 34px rgba(23, 126, 137, 0.24);
+  pointer-events: none;
+  transition: left 0.18s ease, top 0.18s ease, width 0.18s ease, height 0.18s ease;
+}
+
+.guide-popover {
+  position: fixed;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 22px 60px rgba(10, 20, 24, 0.28);
+}
+
+.guide-step-count {
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.guide-popover h2 {
+  margin: 6px 0 8px;
+  font-size: 18px;
+}
+
+.guide-popover p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.guide-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.guide-actions button {
+  min-height: 36px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+.guide-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 @media (max-width: 860px) {
   .home-view {
     grid-template-columns: minmax(260px, 1fr);
+  }
+
+  .translator-panel {
+    right: 8px;
+    width: min(340px, calc(100vw - 18px));
+  }
+
+  .translator-panel.collapsed {
+    right: 0;
+  }
+
+  .translator-actions,
+  .translator-settings-actions,
+  .guide-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .guide-popover {
+    left: 14px !important;
+    right: 14px;
+    top: auto !important;
+    bottom: 14px;
+    width: auto !important;
   }
 
   .job-config label,
