@@ -124,6 +124,12 @@ button {
   font-weight: 900;
 }
 
+.tutorial-button {
+  width: 54px;
+  font-size: 14px;
+  font-weight: 850;
+}
+
 main {
   width: min(1780px, calc(100vw - 20px));
   margin: 0 auto;
@@ -422,6 +428,14 @@ select:focus {
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.inline-template-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
 }
 
 .file-action {
@@ -1000,11 +1014,114 @@ button:disabled {
   min-height: 500px;
 }
 
+.naming-history-bar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, #fbfefe, #f6fafb);
+}
+
+.history-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-width: 150px;
+}
+
+.history-head strong {
+  font-size: 15px;
+}
+
+.history-head .ghost-action {
+  min-height: 34px;
+  padding: 0 10px;
+}
+
+.naming-session-list {
+  display: flex;
+  gap: 8px;
+  min-height: 0;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.naming-session-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 8px;
+  row-gap: 2px;
+  min-width: 170px;
+  max-width: 260px;
+  min-height: 46px;
+  padding: 7px 28px 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+  text-align: left;
+}
+
+.naming-session-item:hover,
+.naming-session-item.active {
+  border-color: rgba(23, 126, 137, 0.42);
+  background: #f3fafa;
+}
+
+.naming-session-item.active {
+  box-shadow: inset 0 0 0 1px rgba(23, 126, 137, 0.18);
+}
+
+.naming-session-item strong,
+.naming-session-item span {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.naming-session-item span {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.naming-session-item .session-delete {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #9b4a40;
+  font-size: 15px;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.naming-session-item .session-delete:hover {
+  background: #fff0ed;
+  color: var(--danger);
+}
+
 .asset-list {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
   min-height: 500px;
+  min-width: 0;
 }
 
 .editor-panel {
@@ -1058,7 +1175,38 @@ button:disabled {
 }
 
 .work-view .list-head {
+  gap: 12px;
   padding: 10px 12px;
+}
+
+.list-title-block,
+.list-count-block {
+  display: grid;
+  gap: 6px;
+}
+
+.list-count-block {
+  justify-items: end;
+}
+
+.select-all-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: fit-content;
+  cursor: pointer;
+}
+
+.select-all-control input {
+  width: 16px;
+  height: 16px;
+}
+
+.select-all-control span,
+#selectedAssetCount {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
 }
 
 .work-view .asset-list-body {
@@ -1674,6 +1822,79 @@ button:disabled {
   opacity: 0.5;
 }
 
+.tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(10, 20, 24, 0.64);
+}
+
+.tutorial-dialog {
+  width: min(1180px, calc(100vw - 36px));
+  max-height: calc(100vh - 36px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 24px 70px rgba(10, 20, 24, 0.34);
+}
+
+.tutorial-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.tutorial-head span {
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.tutorial-head h2 {
+  margin: 4px 0 0;
+  font-size: 22px;
+}
+
+.tutorial-stage {
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.tutorial-stage img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: calc(100vh - 190px);
+  object-fit: contain;
+  background: #fff;
+}
+
+.tutorial-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.tutorial-actions button {
+  min-width: 112px;
+}
+
+.tutorial-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 @media (max-width: 860px) {
   .home-view {
     grid-template-columns: minmax(260px, 1fr);
@@ -1694,6 +1915,21 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 
+  .tutorial-overlay {
+    padding: 10px;
+  }
+
+  .tutorial-dialog {
+    width: calc(100vw - 20px);
+    max-height: calc(100vh - 20px);
+    padding: 12px;
+  }
+
+  .tutorial-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
   .guide-popover {
     left: 14px !important;
     right: 14px;
@@ -1710,6 +1946,18 @@ button:disabled {
   .inline-prefix,
   .inline-final-name {
     grid-template-columns: 1fr;
+  }
+
+  .naming-history-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .naming-session-list {
+    max-height: none;
+  }
+
+  .naming-session-item {
+    min-width: 180px;
   }
 
   .asset-item input[type="checkbox"] {

@@ -1,7 +1,9 @@
-/* NGRAI AutoName Tool V2.15 module: rendering.js */
+/* NGRAI AutoName Tool V2.20 module: rendering.js */
 function renderAssetList() {
   const problemCount = assets.filter((asset) => asset.dimensionIssue).length;
   els.fileCount.textContent = assets.length + " 张" + (problemCount ? " / " + problemCount + " 张问题" : "");
+  renderNamingSessionList();
+  syncSelectAllControl();
   if (!assets.length) {
     els.assetList.className = "asset-list-body empty-state";
     els.assetList.textContent = "请先上传切图文件夹";
@@ -11,6 +13,7 @@ function renderAssetList() {
   if (!visibleAssets.length) {
     els.assetList.className = "asset-list-body empty-state";
     els.assetList.textContent = "当前没有分辨率问题图片";
+    syncSelectAllControl();
     return;
   }
 
@@ -28,6 +31,7 @@ function renderAssetList() {
     row.addEventListener("click", (event) => {
       if (event.target.closest(".asset-meta") && window.getSelection?.().toString().trim()) return;
       selectedId = asset.id;
+      saveCurrentNamingSession();
       renderAssetList();
     });
 
@@ -38,6 +42,9 @@ function renderAssetList() {
     checkbox.addEventListener("change", (event) => {
       event.stopPropagation();
       asset.checked = checkbox.checked;
+      saveCurrentNamingSession();
+      syncSelectAllControl();
+      renderNamingSessionList();
     });
 
     const img = document.createElement("img");
@@ -97,6 +104,7 @@ function renderAssetList() {
       asset.customPrefix = "";
       asset.customBasePrefix = prefixInput.value === "" ? "__none" : prefixInput.value;
       afterName.querySelector("strong").textContent = asset.finalBaseName ? buildExportName(asset) : "待命名";
+      saveCurrentNamingSession();
     });
     prefix.append(prefixLabel, prefixInput);
 
@@ -112,6 +120,7 @@ function renderAssetList() {
       asset.customPrefix = "";
       asset.customProjectName = sanitizeName(projectInput.value);
       afterName.querySelector("strong").textContent = asset.finalBaseName ? buildExportName(asset) : "待命名";
+      saveCurrentNamingSession();
     });
     project.append(projectLabel, projectInput);
 
@@ -127,6 +136,7 @@ function renderAssetList() {
       asset.customPrefix = "";
       asset.customViewName = sanitizeName(viewInput.value);
       afterName.querySelector("strong").textContent = asset.finalBaseName ? buildExportName(asset) : "待命名";
+      saveCurrentNamingSession();
     });
     view.append(viewLabel, viewInput);
 
@@ -151,6 +161,7 @@ function renderAssetList() {
       button.append(nameText, meaningText);
       button.addEventListener("click", () => {
         asset.finalBaseName = formatNamingName(name);
+        saveCurrentNamingSession();
         renderAssetList();
         showToast("已填入推荐名称");
       });
@@ -178,6 +189,7 @@ function renderAssetList() {
       afterName.querySelector("strong").textContent = asset.finalBaseName ? buildExportName(asset) : "待命名";
       finalMeaning.dataset.meaningKey = getMeaningKey(asset.finalBaseName);
       finalMeaning.textContent = "中文含义：" + getDisplayMeaning(asset.finalBaseName);
+      saveCurrentNamingSession();
     });
     finalField.append(finalInput, finalMeaning);
     finalLabel.append(finalText, finalField);
@@ -187,6 +199,7 @@ function renderAssetList() {
     lexiconWrap.open = Boolean(asset.lexiconOpen);
     lexiconWrap.addEventListener("toggle", () => {
       asset.lexiconOpen = lexiconWrap.open;
+      saveCurrentNamingSession();
     });
     const lexiconSummary = document.createElement("summary");
     lexiconSummary.textContent = "词库";
@@ -218,6 +231,7 @@ function renderAssetList() {
           const nextDuplicateStatus = getDuplicateStatus(asset);
           duplicateCheck.querySelector("strong").textContent = nextDuplicateStatus.message;
           duplicateCheck.classList.toggle("warning-line", nextDuplicateStatus.hasIssue);
+          saveCurrentNamingSession();
           renderLexiconTerms();
         });
         chips.appendChild(chip);
@@ -250,6 +264,52 @@ function renderAssetList() {
     renderAssetList();
   });
   protectEditableShortcuts(els.assetList);
+}
+
+function renderNamingSessionList() {
+  if (!els.namingSessionList) return;
+  if (!namingSessions.length) {
+    els.namingSessionList.innerHTML = "";
+    return;
+  }
+  els.namingSessionList.innerHTML = "";
+  namingSessions.forEach((session) => {
+    const sessionAssets = session.id === activeNamingSessionId ? assets : session.assets || [];
+    const doneCount = sessionAssets.filter((asset) => asset.finalBaseName).length;
+    const issueCount = sessionAssets.filter((asset) => asset.dimensionIssue).length;
+    const button = document.createElement("div");
+    button.setAttribute("role", "button");
+    button.tabIndex = 0;
+    button.className = "naming-session-item" + (session.id === activeNamingSessionId ? " active" : "");
+    button.dataset.sessionId = session.id;
+    const name = document.createElement("strong");
+    name.textContent = session.name;
+    name.title = "双击修改记录名称";
+    name.addEventListener("dblclick", (event) => {
+      event.stopPropagation();
+      renameNamingSession(session.id);
+    });
+    const meta = document.createElement("span");
+    meta.textContent = sessionAssets.length + " 张 / 完成 " + doneCount + (issueCount ? " / 问题 " + issueCount : "");
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "session-delete";
+    deleteButton.textContent = "×";
+    deleteButton.title = "删除这条记录";
+    deleteButton.setAttribute("aria-label", "删除命名记录：" + session.name);
+    deleteButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      deleteNamingSession(session.id);
+    });
+    button.append(name, meta, deleteButton);
+    button.addEventListener("click", () => switchNamingSession(session.id));
+    button.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      switchNamingSession(session.id);
+    });
+    els.namingSessionList.appendChild(button);
+  });
 }
 
 function buildDuplicateStatusContext() {
@@ -394,7 +454,8 @@ function getDetectionWarningSortKey(asset) {
 function getDetectionWarningType(asset) {
   const warnings = asset.warnings || [];
   if (warnings.some((message) => message.startsWith("疑似重复资源"))) return "01-疑似重复资源";
-  if (warnings.some((message) => message.includes("2048") || message.includes("推荐切2张"))) return "02-2048不推荐";
+  if (warnings.some((message) => message.includes("效果图尺寸"))) return "02-效果图尺寸提示";
+  if (warnings.some((message) => message.includes("1024"))) return "03-1024以上提示";
   return "99-其他警告";
 }
 

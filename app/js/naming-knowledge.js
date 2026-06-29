@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.15 module: naming-knowledge.js */
+/* NGRAI AutoName Tool V2.20 module: naming-knowledge.js */
 let meaningQueue = [];
 let meaningQueueActive = 0;
 
@@ -356,6 +356,7 @@ async function translateTextByModel(text) {
     "请把中文文件名翻译成简洁英文 UI 命名词，只返回名称本身。",
     "要求：PascalCase 英文词组，用下划线连接；不要包含文件扩展名、图片尺寸、固定前缀或工程名。",
     "如果背景/底/底图出现，使用 BG；如果中文无法准确翻译，可以使用拼音但仍保持 PascalCase。",
+    "用户自定义提示文本：" + (rules.aiPromptText || "无"),
     "原始文件名：" + String(text || "").trim(),
   ].join("\n");
   const response = await fetch(endpoint, {

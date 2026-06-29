@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.15 module: export-template-storage.js */
+/* NGRAI AutoName Tool V2.20 module: export-template-storage.js */
 function resetAppLocalStorageOnVersionChange() {
   const savedVersion = localStorage.getItem(APP_VERSION_KEY);
   if (savedVersion === APP_VERSION) return;
@@ -93,6 +93,7 @@ function collectRulesForm() {
     stateTerms: els.stateTerms.value.trim() || defaultRules.stateTerms,
     filenameRules: els.filenameRules.value.trim() || defaultRules.filenameRules,
     contextDocs: els.contextDocs.value.trim(),
+    aiPromptText: els.aiPromptText.value.trim(),
   };
 }
 
@@ -114,6 +115,7 @@ function fillRulesForm() {
   els.stateTerms.value = rules.stateTerms;
   els.filenameRules.value = rules.filenameRules;
   els.contextDocs.value = rules.contextDocs || "";
+  els.aiPromptText.value = rules.aiPromptText || "";
 }
 
 function fillAiSettings() {
@@ -136,6 +138,51 @@ function exportSchemeTemplate() {
   link.click();
   URL.revokeObjectURL(url);
   showToast("已导出多页签方案模板");
+}
+
+function exportPromptText() {
+  const current = collectRulesForm();
+  const payload = {
+    type: "ngr-ai-autoname-prompt-text",
+    version: APP_VERSION,
+    schemeName: current.schemeName,
+    exportedAt: new Date().toISOString(),
+    aiPromptText: current.aiPromptText || "",
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = sanitizeName(current.schemeName) + "_AI提示文本.json";
+  link.click();
+  URL.revokeObjectURL(url);
+  showToast("AI 提示文本已导出");
+}
+
+async function importPromptText(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    let promptText = text.trim();
+    if (/\.json$/i.test(file.name) || text.trim().startsWith("{")) {
+      const payload = JSON.parse(text);
+      promptText = String(payload.aiPromptText || payload.promptText || payload.prompt || "").trim();
+    }
+    if (!promptText) {
+      showToast("导入失败，文件里没有可用的提示文本");
+      return;
+    }
+    els.aiPromptText.value = promptText;
+    rules = collectRulesForm();
+    saveRules(rules);
+    upsertScheme(rules);
+    showToast("AI 提示文本已导入并保存到当前方案");
+  } catch (error) {
+    showToast("导入失败，请检查提示文本文件格式");
+  } finally {
+    event.target.value = "";
+  }
 }
 
 async function importSchemeTemplate(event) {
@@ -175,6 +222,7 @@ function buildExcelTemplate(current) {
         ["页面词库/组件词库/状态词库：每行填写一个英文命名词。"],
         ["文件名匹配规则：第一列填写中文或英文关键词，第二列填写转换后的英文名。"],
         ["上下文文档：填写项目背景、页面结构和特殊命名约定，AI 会参考这些内容。"],
+        ["AI提示文本：填写当前方案专用提示词，会追加到视觉 AI 命名和文本模型翻译请求中。"],
         ["不要修改页签名称和表头，否则可能无法导入。"],
       ],
     },
@@ -207,7 +255,11 @@ function buildExcelTemplate(current) {
     },
     {
       name: "上下文文档",
-      rows: [["项目上下文文档", current.contextDocs || ""]],
+      rows: [["字段", "内容"], ["项目上下文文档", current.contextDocs || ""]],
+    },
+    {
+      name: "AI提示文本",
+      rows: [["字段", "内容"], ["AI提示文本", current.aiPromptText || ""]],
     },
   ];
   return [
@@ -246,7 +298,8 @@ function parseSchemeTemplateWorkbook(text) {
   const componentTerms = readWorksheetValues(xml, "组件词库", 1);
   const stateTerms = readWorksheetValues(xml, "状态词库", 1);
   const rulesRows = readWorksheetRows(xml, "文件名匹配规则").slice(1);
-  const contextRows = readWorksheetRows(xml, "上下文文档").slice(1);
+  const contextDocs = readWorksheetLongText(xml, "上下文文档");
+  const aiPromptText = readWorksheetLongText(xml, "AI提示文本");
   const baseRows = readWorksheetRows(xml, "基础配置").slice(1);
   baseRows.forEach(([field, value]) => {
     const cleanField = String(field || "").trim();
@@ -265,9 +318,16 @@ function parseSchemeTemplateWorkbook(text) {
     .filter(([keyword, value]) => keyword && value)
     .map(([keyword, value]) => keyword + "=" + value);
   if (filenameRules.length) next.filenameRules = filenameRules.join("\n");
-  const contextDocs = contextRows.map((row) => row.filter(Boolean).join("\n")).filter(Boolean).join("\n");
   if (contextDocs) next.contextDocs = contextDocs;
+  if (aiPromptText) next.aiPromptText = aiPromptText;
   return next;
+}
+
+function readWorksheetLongText(xml, sheetName) {
+  const rows = readWorksheetRows(xml, sheetName).filter((row) => row.some((cell) => String(cell || "").trim()));
+  if (!rows.length) return "";
+  if (rows.length === 1) return rows[0].slice(1).join("\n").trim() || rows[0].join("\n").trim();
+  return rows.slice(1).map((row) => row.slice(1).join("\n").trim() || row.join("\n").trim()).filter(Boolean).join("\n");
 }
 
 function readWorksheetValues(xml, sheetName, columnIndex) {
@@ -310,6 +370,7 @@ function parseSchemeTemplateCsv(text) {
     if (cleanModule === "状态词库" && cleanValue) stateTerms.push(cleanValue);
     if (cleanModule === "文件名匹配规则" && cleanField && cleanValue) filenameRules.push(cleanField + "=" + cleanValue);
     if (cleanModule === "上下文文档" && cleanValue) next.contextDocs = [next.contextDocs, cleanValue].filter(Boolean).join("\n");
+    if (cleanModule === "AI提示文本" && cleanValue) next.aiPromptText = [next.aiPromptText, cleanValue].filter(Boolean).join("\n");
   });
   if (pageTerms.length) next.pageTerms = pageTerms.join("\n");
   if (componentTerms.length) next.componentTerms = componentTerms.join("\n");

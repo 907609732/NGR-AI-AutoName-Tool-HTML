@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.15 module: ai-workflow.js */
+/* NGRAI AutoName Tool V2.20 module: ai-workflow.js */
 async function runNaming() {
   return runNamingWorkflow({ useAi: true });
 }
@@ -55,6 +55,7 @@ async function runNamingWorkflow({ useAi, useExternalTranslation = false }) {
     namingController = null;
     applySemanticSequenceNumbers(processedAssets);
     setRunButtonLoading(false);
+    saveCurrentNamingSession();
     renderAssetList();
     showToast(stopRequested ? "已终止命名" : "已使用翻译 API 生成推荐名称");
     return;
@@ -106,6 +107,7 @@ async function runNamingWorkflow({ useAi, useExternalTranslation = false }) {
   namingController = null;
   applySemanticSequenceNumbers(processedAssets);
   setRunButtonLoading(false);
+  saveCurrentNamingSession();
   renderAssetList();
   showToast(stopRequested ? "已终止命名" : shouldUseAi ? "AI 推荐命名已完成" : shouldUseExternalTranslation ? "已使用翻译 API 生成推荐名称" : "已使用本地知识库生成推荐名称");
 }
@@ -394,6 +396,7 @@ function buildAiPrompt(asset, localRecommendations) {
     "状态词库：" + parseList(rules.stateTerms).join(", "),
     "文件名匹配规则：" + parseFilenameRules(rules.filenameRules).map((rule) => rule.keyword + "=" + rule.value).join(", "),
     "项目上下文文档：" + (rules.contextDocs || "无"),
+    "用户自定义提示文本：" + (rules.aiPromptText || "无"),
   ].join("\n");
 }
 

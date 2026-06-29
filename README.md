@@ -1,28 +1,102 @@
-正在持续开发中  
+# NGRAI 辅助 UI 切图命名工具
 
+正在持续开发中。
 
-在游戏开发流程中，UI 资源拼接、界面重构还原环节，普遍存在手动命名文件效率低下的问题。为此我们研发了这款 AI 辅助重命名工具，可一键完成文件自动化命名。工具内置多套行业通用命名规范，全面适配主流游戏项目标准。
+这是一款面向游戏 UI 资源整理流程的网页工具，用来辅助 UI 切图批量命名、规范检测、知识库管理和 AI 命名。  
+它的目标是减少手动改文件名的重复劳动，让不同项目组可以按自己的命名规范快速处理大量切图资源。
 
+作者：by 五成（月财）  
+合作与反馈：907609732@qq.com  
+GitHub：[907609732/NGR-AI-AutoName-Tool](https://github.com/907609732/NGR-AI-AutoName-Tool.git)
 
-合作：907609732@qq.com  
+## 核心功能
 
+### AI 辅助命名
 
-## **使用教程**
-### **配置说明**
-先点击这里进行下载  
-<img width="2940" height="1682" alt="image" src="https://github.com/user-attachments/assets/e9f4599f-0a51-4ccf-bf89-4334db507684" />
+- 支持上传切图文件夹、补充单张图片和参考效果图。
+- 可根据图片内容、原始中文文件名、项目知识库自动推荐英文命名。
+- 支持 AI 视觉命名、本地知识库命名、百度翻译 API 命名等模式。
+- 支持手动编辑最终名称，并批量追加后缀、批量添加序号。
+- 下载时只改文件名，不重新编码图片内容。
 
-下载后解压打开index.html文件，即可访问项目网站
-<img width="1602" height="894" alt="c38388932b93f07be43dc6b1526235cd" src="https://github.com/user-attachments/assets/3463ec02-e522-4034-8643-bd3984239ef2" />
+### 项目与方案配置
 
-下载后第一次先在设置里面配置API，然后点测试API，成功后即可使用
-<img width="2882" height="838" alt="image" src="https://github.com/user-attachments/assets/66121a42-d832-4788-b374-2badfb26e4e1" />
+- 支持多个项目组，每个项目组可配置多套命名方案。
+- 不同项目、不同方案的词库和上下文互不干扰。
+- 支持配置固定前缀、工程名、界面名、分隔符、页面词库、组件词库、状态词库、文件名匹配规则。
+- 支持自定义 AI 提示文本，让每套方案拥有自己的命名偏好。
 
+### 命名知识库
 
+- 内置 NGR 命名规范和 yysls 命名规范。
+- 可配置中文关键词到英文或拼音的映射，例如 `背景=BG`、`按钮=Button`、`常态=Normal`。
+- 每张图片旁边都有词库快捷选择，可直接点击词条组合命名。
+- 支持本地知识库离线命名，适合不想调用视觉 AI 的场景。
 
-### **软件界面欣赏：**
-<img width="2940" height="1682" alt="image" src="https://github.com/user-attachments/assets/0887de3b-19a0-47d0-9082-43de143510ce" />
+### UI 切图检测
 
-<img width="2940" height="1682" alt="image" src="https://github.com/user-attachments/assets/9ef35199-3c9d-466f-92f2-77ef00d799a1" />
+- 支持上传文件夹后检测图片规范。
+- NGR 检测规则包含：
+  - 背景图规范尺寸：`3440x1440`
+  - PC 效果图尺寸：`2560x1440`
+  - 移动端效果图尺寸：`2340x1080`
+  - 普通进引擎切图单边不能超过 `1024`
+  - 单边超过 `512` 的大图需要是 `4` 的倍数
+  - 图片宽高不能是单数
+  - NGR 只允许 `.png` 格式
+- 支持只看问题图片、只看警告图片、重复资源检测和检测规则说明。
 
-<img width="2940" height="1682" alt="image" src="https://github.com/user-attachments/assets/6b7198cb-4903-40ea-aebd-7f0f4009b89f" />
+### 导入导出
+
+- 支持导出和导入项目命名方案模板。
+- 方案模板包含基础配置、词库、文件名匹配规则、上下文文档和 AI 提示文本。
+- 支持导出和导入 API 配置，方便换电脑测试。
+- 支持单独导出和导入 AI 提示文本。
+
+## 使用方式
+
+### 1. 下载项目
+
+先点击 GitHub 页面右上角 `Code`，下载 ZIP。
+
+<img width="2940" height="1682" alt="下载项目" src="https://github.com/user-attachments/assets/e9f4599f-0a51-4ccf-bf89-4334db507684" />
+
+### 2. 打开工具
+
+下载后解压，双击根目录里的：
+
+```text
+点击启动服务.html
+```
+
+如果浏览器拦截本地文件，请右键选择浏览器打开。
+
+<img width="1602" height="894" alt="打开工具" src="https://github.com/user-attachments/assets/3463ec02-e522-4034-8643-bd3984239ef2" />
+
+### 3. 配置 API
+
+第一次使用 AI 功能前，进入右上角设置，填写 API 配置，然后点击测试 API。  
+如果暂时不配置 API，也可以使用本地知识库命名和手动词库组合。
+
+<img width="2882" height="838" alt="配置 API" src="https://github.com/user-attachments/assets/66121a42-d832-4788-b374-2badfb26e4e1" />
+
+## 适合场景
+
+- UI 切图文件很多，需要批量统一命名。
+- 原始文件名是中文，需要翻译成项目规范英文。
+- 同一个项目有多套界面，需要分批记录命名历史。
+- 项目组需要统一命名知识库和命名规则。
+- 需要在切图进引擎前检查分辨率、格式和重复资源。
+
+## 界面预览
+
+<img width="2940" height="1682" alt="主界面预览" src="https://github.com/user-attachments/assets/0887de3b-19a0-47d0-9082-43de143510ce" />
+
+<img width="2940" height="1682" alt="命名界面预览" src="https://github.com/user-attachments/assets/9ef35199-3c9d-466f-92f2-77ef00d799a1" />
+
+<img width="2940" height="1682" alt="设置界面预览" src="https://github.com/user-attachments/assets/6b7198cb-4903-40ea-aebd-7f0f4009b89f" />
+
+## 说明
+
+本工具仍在快速迭代中，功能和界面会持续优化。  
+如果你有项目命名规范、训练数据、使用建议或合作想法，欢迎通过邮件或 GitHub 反馈。

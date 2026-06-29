@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.15 module: assets-detection.js */
+/* NGRAI AutoName Tool V2.20 module: assets-detection.js */
 function applyBatchSuffix() {
   const suffix = sanitizeName(els.batchSuffix.value);
   if (!suffix) {
@@ -11,6 +11,7 @@ function applyBatchSuffix() {
     const base = asset.finalBaseName || makeRecommendations(asset)[0];
     asset.finalBaseName = appendPart(base, suffix);
   });
+  saveCurrentNamingSession();
   renderAssetList();
   showToast("已更新 " + targets.length + " 张图片");
 }
@@ -27,6 +28,7 @@ function applyBatchSequence() {
     const base = asset.finalBaseName || makeRecommendations(asset)[0];
     asset.finalBaseName = appendPart(removeTrailingSequence(base), formatSequenceNumber(start + index));
   });
+  saveCurrentNamingSession();
   renderAssetList();
   showToast("已给 " + targets.length + " 张图片添加序号");
 }
@@ -51,6 +53,7 @@ function removeSelectedAssets() {
   assets = assets.filter((asset) => !targetIds.has(asset.id));
   if (!assets.some((asset) => asset.id === selectedId)) selectedId = assets[0]?.id || null;
   assetRenderLimit = ASSET_RENDER_BATCH_SIZE;
+  saveCurrentNamingSession();
   renderAssetList();
   showToast("已删除选中的图片");
 }
@@ -58,8 +61,8 @@ function removeSelectedAssets() {
 function toggleProblemFilter() {
   showProblemOnly = !showProblemOnly;
   assetRenderLimit = ASSET_RENDER_BATCH_SIZE;
-  els.problemFilter.textContent = showProblemOnly ? "显示全部图片" : "只看问题图片";
-  els.problemFilter.setAttribute("aria-pressed", String(showProblemOnly));
+  syncProblemFilterButton();
+  saveCurrentNamingSession();
   renderAssetList();
 }
 
@@ -84,6 +87,184 @@ function syncDetectionFilterButtons() {
   els.detectionProblemFilter.setAttribute("aria-pressed", String(showDetectionProblemOnly));
   els.detectionWarningFilter.textContent = showDetectionWarningOnly ? "显示全部图片" : "只看警告图片";
   els.detectionWarningFilter.setAttribute("aria-pressed", String(showDetectionWarningOnly));
+}
+
+function initNamingSessions() {
+  if (namingSessions.length) return;
+  const session = createNamingSessionRecord("命名记录 01");
+  namingSessions = [session];
+  activeNamingSessionId = session.id;
+  restoreNamingSession(session, { applyParams: false });
+}
+
+function createNamingSessionRecord(name) {
+  const now = Date.now();
+  return {
+    id: "naming-session-" + now + "-" + Math.random().toString(16).slice(2),
+    name,
+    createdAt: now,
+    updatedAt: now,
+    assets: [],
+    selectedId: null,
+    showProblemOnly: false,
+    assetRenderLimit: ASSET_RENDER_BATCH_SIZE,
+    params: collectNamingSessionParams(),
+  };
+}
+
+function collectNamingSessionParams() {
+  return {
+    activeProjectId,
+    schemeName: rules.schemeName,
+    basePrefix: rules.basePrefix,
+    projectName: rules.projectName,
+    viewName: rules.viewName || "",
+  };
+}
+
+function saveCurrentNamingSession() {
+  const session = getActiveNamingSession();
+  if (!session) return;
+  session.assets = assets;
+  session.selectedId = selectedId;
+  session.showProblemOnly = showProblemOnly;
+  session.assetRenderLimit = assetRenderLimit;
+  session.params = collectNamingSessionParams();
+  session.updatedAt = Date.now();
+}
+
+function syncSessionNamingParams() {
+  const session = getActiveNamingSession();
+  if (!session) return;
+  session.params = collectNamingSessionParams();
+  session.updatedAt = Date.now();
+  renderNamingSessionList();
+}
+
+function getActiveNamingSession() {
+  return namingSessions.find((session) => session.id === activeNamingSessionId) || namingSessions[0] || null;
+}
+
+function restoreNamingSession(session, options = {}) {
+  activeNamingSessionId = session.id;
+  assets = session.assets || [];
+  selectedId = assets.some((asset) => asset.id === session.selectedId) ? session.selectedId : assets[0]?.id || null;
+  showProblemOnly = Boolean(session.showProblemOnly);
+  assetRenderLimit = session.assetRenderLimit || ASSET_RENDER_BATCH_SIZE;
+  if (options.applyParams !== false) applyNamingSessionParams(session.params);
+  syncProblemFilterButton();
+  renderNamingSessionList();
+  renderAssetList();
+}
+
+function applyNamingSessionParams(params) {
+  if (!params) return;
+  const project = projects.find((item) => item.id === params.activeProjectId) || getActiveProject();
+  activeProjectId = project.id;
+  localStorage.setItem(ACTIVE_PROJECT_KEY, activeProjectId);
+  schemes = project.schemes.length ? project.schemes : [normalizeLoadedRules({ ...defaultRules })];
+  project.schemes = schemes;
+  const selectedScheme = schemes.find((scheme) => scheme.schemeName === params.schemeName);
+  if (!selectedScheme && params.schemeName) showToast("当前记录的配置方案不存在，已保留当前项目默认方案");
+  rules = normalizeLoadedRules({ ...defaultRules, ...(selectedScheme || getProjectActiveScheme(project)) });
+  rules.basePrefix = params.basePrefix ?? rules.basePrefix;
+  rules.projectName = params.projectName || rules.projectName || defaultRules.projectName;
+  rules.viewName = params.viewName || "";
+  project.activeSchemeName = rules.schemeName;
+  saveProjects();
+  saveRules(rules);
+  fillRulesForm();
+  renderProjectSelect();
+  renderSchemeSelect();
+  updateRulePreview();
+  updateActiveRuleText();
+}
+
+function createNamingSession() {
+  saveCurrentNamingSession();
+  const session = createNamingSessionRecord(makeDefaultNamingSessionName());
+  namingSessions.push(session);
+  restoreNamingSession(session);
+  showToast("已新建命名记录：" + session.name);
+}
+
+function makeDefaultNamingSessionName() {
+  const projectName = sanitizeName(els.workProjectName.value || rules.projectName);
+  const viewName = sanitizeName(els.workViewName.value || rules.viewName);
+  const baseName = projectName && viewName ? projectName + "_" + viewName : "";
+  if (baseName && !namingSessions.some((session) => session.name === baseName)) return baseName;
+  return "命名记录 " + String(namingSessions.length + 1).padStart(2, "0");
+}
+
+function switchNamingSession(sessionId) {
+  if (sessionId === activeNamingSessionId) return;
+  const session = namingSessions.find((item) => item.id === sessionId);
+  if (!session) return;
+  saveCurrentNamingSession();
+  restoreNamingSession(session);
+  showToast("已切换命名记录：" + session.name);
+}
+
+function renameNamingSession(sessionId = activeNamingSessionId) {
+  const session = namingSessions.find((item) => item.id === sessionId) || getActiveNamingSession();
+  if (!session) return;
+  const nextName = window.prompt("请输入命名记录名称", session.name);
+  if (nextName == null) return;
+  const trimmed = nextName.trim();
+  if (!trimmed) {
+    showToast("命名记录名称不能为空");
+    return;
+  }
+  session.name = trimmed;
+  session.updatedAt = Date.now();
+  renderNamingSessionList();
+  showToast("命名记录已重命名");
+}
+
+function deleteNamingSession(sessionId = activeNamingSessionId) {
+  if (namingSessions.length <= 1) {
+    showToast("至少保留一条命名记录");
+    return;
+  }
+  const index = namingSessions.findIndex((session) => session.id === sessionId);
+  const targetIndex = index >= 0 ? index : 0;
+  const target = namingSessions[targetIndex];
+  target.assets.forEach(revokeAssetPreviewUrl);
+  namingSessions.splice(targetIndex, 1);
+  if (target.id === activeNamingSessionId) {
+    const nextSession = namingSessions[Math.max(0, targetIndex - 1)] || namingSessions[0];
+    restoreNamingSession(nextSession);
+  } else {
+    renderNamingSessionList();
+  }
+  showToast("已删除命名记录");
+}
+
+function syncProblemFilterButton() {
+  els.problemFilter.textContent = showProblemOnly ? "显示全部图片" : "只看问题图片";
+  els.problemFilter.setAttribute("aria-pressed", String(showProblemOnly));
+}
+
+function toggleVisibleAssetSelection() {
+  const visibleAssets = getVisibleAssets();
+  if (!visibleAssets.length) return;
+  const shouldSelect = !visibleAssets.every((asset) => asset.checked);
+  visibleAssets.forEach((asset) => {
+    asset.checked = shouldSelect;
+  });
+  renderAssetList();
+  showToast((shouldSelect ? "已选中 " : "已取消选中 ") + visibleAssets.length + " 张图片");
+}
+
+function syncSelectAllControl() {
+  if (!els.selectVisibleAssets || !els.selectedAssetCount) return;
+  const visibleAssets = getVisibleAssets();
+  const selectedCount = assets.filter((asset) => asset.checked).length;
+  const visibleSelectedCount = visibleAssets.filter((asset) => asset.checked).length;
+  els.selectedAssetCount.textContent = "已选 " + selectedCount + " 张";
+  els.selectVisibleAssets.disabled = !visibleAssets.length;
+  els.selectVisibleAssets.checked = Boolean(visibleAssets.length && visibleSelectedCount === visibleAssets.length);
+  els.selectVisibleAssets.indeterminate = Boolean(visibleSelectedCount && visibleSelectedCount < visibleAssets.length);
 }
 
 async function addFiles(files) {
@@ -116,6 +297,7 @@ async function addFiles(files) {
     await yieldToBrowser();
   }
   if (!selectedId && assets.length) selectedId = assets[0].id;
+  saveCurrentNamingSession();
   renderAssetList();
   if (loadedIssueCount) {
     showToast("已载入 " + loadedCount + " 张，其中 " + loadedIssueCount + " 张分辨率有问题");
@@ -251,6 +433,32 @@ function validateDetectionFormat(file) {
   return /\.png$/i.test(file.name) ? [] : ["注意导出切图格式，NGR只允许png格式，不允许其他格式"];
 }
 
+function getNgrSpecialDimensionSpec(width, height, profile) {
+  const config = normalizeDetectionProfile(profile);
+  if (width === config.backgroundWidth && height === config.backgroundHeight) {
+    return {
+      type: "background",
+      label: "背景图",
+      message: "背景图规范分辨率是" + config.backgroundWidth + "x" + config.backgroundHeight,
+    };
+  }
+  if (width === 2560 && height === 1440) {
+    return {
+      type: "pc-effect",
+      label: "PC效果图",
+      message: "PC效果图尺寸是2560x1440；NGR不允许1024分辨率以上的普通切图进引擎，请确认不要作为引擎切图提交",
+    };
+  }
+  if (width === 2340 && height === 1080) {
+    return {
+      type: "mobile-effect",
+      label: "移动端效果图",
+      message: "移动端效果图尺寸是2340x1080；NGR不允许1024分辨率以上的普通切图进引擎，请确认不要作为引擎切图提交",
+    };
+  }
+  return null;
+}
+
 function validateDetectionDimensions(dimensions, profile) {
   const { width, height } = dimensions || {};
   if (!width || !height) {
@@ -262,26 +470,24 @@ function validateDetectionDimensions(dimensions, profile) {
   const warnings = [];
   if (config.mode === "planner") return validatePlannerDetectionDimensions(width, height);
   if (config.mode === "icon") return validateIconDetectionDimensions(width, height);
-  const isBackground = width === config.backgroundWidth && height === config.backgroundHeight;
-  let label = isBackground ? "背景图" : maxSide > config.largeThreshold ? "大图" : "图集";
+  const specialSpec = getNgrSpecialDimensionSpec(width, height, config);
+  const isEngineException = specialSpec?.type === "background" || specialSpec?.type === "pc-effect" || specialSpec?.type === "mobile-effect";
+  let label = specialSpec?.label || (maxSide > config.largeThreshold ? "大图" : "图集");
 
   if (width % 2 !== 0 || height % 2 !== 0) {
     messages.push("分辨率不是双数，不允许单数");
   }
-  if (maxSide === 2048 && !isBackground) {
-    warnings.push("该分辨率允许上传，但是不推荐使用，推荐切2张分辨率1024拼接");
-  } else if (maxSide > config.maxSide && !isBackground) {
-    messages.push("分辨率单边不能超过" + config.maxSide);
+  if (specialSpec?.type === "pc-effect" || specialSpec?.type === "mobile-effect") {
+    warnings.push(specialSpec.message);
   }
-  if (isBackground) {
-    label = "背景图";
-  } else if (maxSide > config.largeThreshold) {
+  if (maxSide > config.maxSide && !isEngineException) {
+    messages.push("NGR不允许1024分辨率以上的图片进引擎；分辨率单边不能超过" + config.maxSide);
+  }
+  if (!specialSpec && maxSide > config.largeThreshold) {
     label = "大图";
     if (width % config.largeMultiple !== 0 || height % config.largeMultiple !== 0) {
       messages.push("单边超过" + config.largeThreshold + "的大图需要是" + config.largeMultiple + "的倍数");
     }
-  } else if (width % config.atlasMultiple !== 0 || height % config.atlasMultiple !== 0) {
-    messages.push("分辨率" + config.largeThreshold + "px以下的图片只要不是单数就行");
   }
 
   return {
@@ -325,18 +531,23 @@ function validateUploadDimensions(dimensions) {
   const { width, height } = dimensions || {};
   if (!isNgrProject(getActiveProject())) return { valid: true, category: "", label: "" };
   if (!width || !height) return { valid: true, category: "unknown", label: "未知规格" };
-  const isBackgroundSize = width === 3440 && height === 1440;
+  const specialSpec = getNgrSpecialDimensionSpec(width, height, getActiveDetectionProfile());
   const maxDimension = Math.max(width, height);
   if (width % 2 !== 0 || height % 2 !== 0) {
     return { valid: true, problem: true, category: "invalid", label: "问题图片", reason: "分辨率宽高不能是单数" };
   }
-  if (maxDimension > 1024 && !isBackgroundSize) {
-    if (maxDimension === 2048) return { valid: true, warning: true, category: "large", label: "大图", reason: "该分辨率允许上传，但是不推荐使用，推荐切2张分辨率1024拼接" };
-    return { valid: true, problem: true, category: "invalid", label: "问题图片", reason: "除 3440x1440 背景图外，1024 以上分辨率有问题" };
+  if (specialSpec?.type === "background") {
+    return { valid: true, category: "background", label: specialSpec.label };
   }
-  if (maxDimension >= 512) {
+  if (specialSpec?.type === "pc-effect" || specialSpec?.type === "mobile-effect") {
+    return { valid: true, warning: true, category: "effect", label: specialSpec.label, reason: specialSpec.message };
+  }
+  if (maxDimension > 1024) {
+    return { valid: true, problem: true, category: "invalid", label: "问题图片", reason: "NGR不允许1024分辨率以上的图片进引擎；分辨率单边不能超过1024" };
+  }
+  if (maxDimension > 512) {
     if (width % 4 !== 0 || height % 4 !== 0) {
-      return { valid: true, problem: true, category: "invalid", label: "问题图片", reason: "512 以上大图宽高必须是 4 的倍数" };
+      return { valid: true, problem: true, category: "invalid", label: "问题图片", reason: "单边超过512的大图需要是4的倍数" };
     }
     return { valid: true, category: "large", label: "大图" };
   }

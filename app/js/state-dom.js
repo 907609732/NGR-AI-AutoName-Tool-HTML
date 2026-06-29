@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.15 module: state-dom.js */
+/* NGRAI AutoName Tool V2.20 module: state-dom.js */
 let projects;
 let activeProjectId;
 let schemes;
@@ -6,6 +6,8 @@ let rules;
 let aiSettings;
 let translationSettings;
 let assets;
+let namingSessions;
+let activeNamingSessionId;
 let detectionProfiles;
 let activeDetectionProfileId;
 let detectionAssets;
@@ -25,6 +27,7 @@ let knowledgeCacheValue;
 let assetRenderLimit;
 let detectionRenderLimit;
 let guideStepIndex;
+let tutorialSlideIndex;
 let baiduTextCache;
 let meaningCache;
 let pendingMeaningNames;
@@ -37,6 +40,8 @@ function bootstrapState() {
   aiSettings = loadAiSettings();
   translationSettings = loadTranslationSettings();
   assets = [];
+  namingSessions = [];
+  activeNamingSessionId = null;
   detectionProfiles = loadDetectionProfiles();
   activeDetectionProfileId = loadActiveDetectionProfileId(detectionProfiles);
   detectionAssets = [];
@@ -56,6 +61,7 @@ function bootstrapState() {
   assetRenderLimit = ASSET_RENDER_BATCH_SIZE;
   detectionRenderLimit = DETECTION_RENDER_BATCH_SIZE;
   guideStepIndex = 0;
+  tutorialSlideIndex = 0;
   baiduTextCache = new Map();
   meaningCache = loadMeaningCache();
   pendingMeaningNames = new Set();
@@ -72,6 +78,7 @@ const els = {
     detectionSettings: document.querySelector("#detectionSettingsView"),
   },
   rulesEntry: document.querySelector("#rulesEntry"),
+  tutorialEntry: document.querySelector("#tutorialEntry"),
   guideEntry: document.querySelector("#guideEntry"),
   workEntry: document.querySelector("#workEntry"),
   detectEntry: document.querySelector("#detectEntry"),
@@ -94,6 +101,9 @@ const els = {
   stateTerms: document.querySelector("#stateTerms"),
   filenameRules: document.querySelector("#filenameRules"),
   contextDocs: document.querySelector("#contextDocs"),
+  aiPromptText: document.querySelector("#aiPromptText"),
+  exportPromptText: document.querySelector("#exportPromptText"),
+  importPromptText: document.querySelector("#importPromptText"),
   aiProvider: document.querySelector("#aiProvider"),
   aiApiFormat: document.querySelector("#aiApiFormat"),
   aiBaseUrl: document.querySelector("#aiBaseUrl"),
@@ -123,6 +133,10 @@ const els = {
   referencePreviewWrap: document.querySelector("#referencePreviewWrap"),
   referencePreview: document.querySelector("#referencePreview"),
   referenceName: document.querySelector("#referenceName"),
+  namingSessionList: document.querySelector("#namingSessionList"),
+  newNamingSession: document.querySelector("#newNamingSession"),
+  selectVisibleAssets: document.querySelector("#selectVisibleAssets"),
+  selectedAssetCount: document.querySelector("#selectedAssetCount"),
   assetList: document.querySelector("#assetList"),
   fileCount: document.querySelector("#fileCount"),
   namingModeSelect: document.querySelector("#namingModeSelect"),
@@ -193,5 +207,11 @@ const els = {
   guidePrev: document.querySelector("#guidePrev"),
   guideNext: document.querySelector("#guideNext"),
   guideClose: document.querySelector("#guideClose"),
+  tutorialOverlay: document.querySelector("#tutorialOverlay"),
+  tutorialStepCount: document.querySelector("#tutorialStepCount"),
+  tutorialImage: document.querySelector("#tutorialImage"),
+  tutorialPrev: document.querySelector("#tutorialPrev"),
+  tutorialNext: document.querySelector("#tutorialNext"),
+  tutorialClose: document.querySelector("#tutorialClose"),
   toast: document.querySelector("#toast"),
 };

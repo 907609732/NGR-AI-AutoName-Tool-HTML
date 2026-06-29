@@ -4,16 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NGRAI辅助UI切图命名工具</title>
-    <link rel="stylesheet" href="styles.css?v=V2.15" />
+    <link rel="stylesheet" href="styles.css?v=V2.20" />
   </head>
   <body>
     <div id="app">
       <header class="topbar">
         <button class="back-button hidden" id="backButton" type="button" aria-label="返回主界面">←</button>
         <div class="topbar-title">
-          <h1>NGRAI辅助UI切图命名工具 <span class="version-badge">V2.15</span></h1>
+          <h1>NGRAI辅助UI切图命名工具 <span class="version-badge">V2.20</span></h1>
           <p id="pageHint">批量整理 UI 切图名称，让文件名保持统一、清楚、可追踪。</p>
         </div>
+        <button class="settings-button tutorial-button" id="tutorialEntry" type="button" aria-label="UI切图检测教程" title="UI切图检测教程">教程</button>
         <button class="settings-button guide-button" id="guideEntry" type="button" aria-label="操作指引" title="操作指引">?</button>
         <button class="settings-button" id="rulesEntry" type="button" aria-label="命名规则设置" title="命名规则设置">⚙</button>
       </header>
@@ -37,7 +38,7 @@
 
         <section class="view rules-view" id="rulesView">
           <div class="section-head">
-            <h2>命名规则 <span class="version-badge">V2.15</span></h2>
+            <h2>命名规则 <span class="version-badge">V2.20</span></h2>
             <p>这些设置会自动保存，并在命名流程中作为全局前缀使用。</p>
           </div>
 
@@ -132,6 +133,20 @@
                   <button class="help-button" type="button" aria-label="项目上下文文档说明" data-tooltip="填写项目背景、页面结构、组件约定、特殊命名说明。AI 命名时会把这里作为上下文参考，不同项目互不干扰。">?</button>
                 </span>
                 <textarea id="contextDocs" rows="6" placeholder="例如：本项目为游戏商城 UI，Shop 表示商城页，Inventory 表示背包页，Popup 表示弹窗，CTA 表示主按钮。"></textarea>
+              </label>
+              <label class="wide">
+                <span class="label-with-help">
+                  AI 提示文本
+                  <button class="help-button" type="button" aria-label="AI提示文本说明" data-tooltip="填写当前方案专用的补充提示词，例如命名语气、禁用词、特殊缩写、优先识别规则。AI视觉命名和文本模型翻译都会参考它。">?</button>
+                </span>
+                <textarea id="aiPromptText" rows="6" placeholder="例如：优先使用短英文词；背景统一用 BG；相同按钮状态按 Normal、Hover、Pressed、Disabled 排序；不要把尺寸写进名称。"></textarea>
+                <div class="inline-template-actions">
+                  <button id="exportPromptText" class="ghost-action" type="button">导出提示文本</button>
+                  <label class="file-action ghost-action">
+                    导入提示文本
+                    <input id="importPromptText" type="file" accept=".json,.txt,text/plain,application/json" />
+                  </label>
+                </div>
               </label>
             </div>
           </div>
@@ -297,7 +312,7 @@
               <input id="workViewName" type="text" placeholder="例如：Home" />
             </label>
             <div class="batch-field batch-operation-field">
-              <span>批量操作</span>
+              <span>批量添加后缀和序号</span>
               <div class="batch-operation-group">
                 <select id="batchOperationMode">
                   <option value="suffix">追加后缀</option>
@@ -327,9 +342,25 @@
 
           <div class="workspace">
             <aside class="asset-list">
+              <div class="naming-history-bar">
+                <div class="history-head">
+                  <strong>命名记录</strong>
+                  <button id="newNamingSession" class="ghost-action" type="button">新建</button>
+                </div>
+                <div id="namingSessionList" class="naming-session-list"></div>
+              </div>
               <div class="list-head">
-                <strong>待处理图片</strong>
-                <span id="fileCount">0 张</span>
+                <div class="list-title-block">
+                  <strong>待处理图片</strong>
+                  <label class="select-all-control">
+                    <input id="selectVisibleAssets" type="checkbox" />
+                    <span>全选当前列表</span>
+                  </label>
+                </div>
+                <div class="list-count-block">
+                  <span id="fileCount">0 张</span>
+                  <span id="selectedAssetCount">已选 0 张</span>
+                </div>
               </div>
               <div id="assetList" class="asset-list-body empty-state">请先上传切图文件夹</div>
             </aside>
@@ -395,7 +426,7 @@
 
           <div id="detectionRulesPanel" class="detection-rules-panel hidden">
             <h3>UI切图检测规范</h3>
-            <p>NGR切图规范：所有图片宽高必须是双数；除 3440x1440 背景图外，单边 1024 以上会提示问题；单边等于 2048 会标黄警告，允许上传但不推荐，建议切成 2 张 1024 拼接；单边超过 512 的大图宽高需要是 4 的倍数；512 以下图集只要不是单数即可。</p>
+            <p>NGR切图规范：所有图片宽高必须是双数；背景图规范尺寸为 3440x1440；效果图规范尺寸为 PC 2560x1440、移动端 2340x1080；NGR 不允许 1024 分辨率以上的普通切图进引擎，分辨率单边不能超过 1024；单边超过 512 的大图需要是 4 的倍数；512 以下图集只要不是单数即可。</p>
             <p>策划配置切图规范：不能有 4 倍图片，宽高都需要是 2 的幂次，例如 32、64、128、256、512、1024。</p>
             <p>图标尺寸检测规范：Icon 只允许正方形，尺寸只允许 32x32、64x64、128x128、256x256、512x512、1024x1024。</p>
             <p>格式规范：NGR 只允许 .png 格式图片；如果上传 JPG、JPEG、WebP、GIF、SVG 等格式，会提示“注意导出切图格式，NGR只允许png格式，不允许其他格式”。</p>
@@ -565,21 +596,40 @@
         </section>
       </div>
 
+      <div class="tutorial-overlay hidden" id="tutorialOverlay" aria-hidden="true">
+        <section class="tutorial-dialog" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle">
+          <div class="tutorial-head">
+            <div>
+              <span id="tutorialStepCount">1 / 10</span>
+              <h2 id="tutorialTitle">UI切图检测功能教程</h2>
+            </div>
+            <button class="settings-button" id="tutorialClose" type="button" aria-label="关闭教程" title="关闭教程">×</button>
+          </div>
+          <div class="tutorial-stage">
+            <img id="tutorialImage" src="assets/tutorials/detection/slide-01.png" alt="UI切图检测教程第 1 页" />
+          </div>
+          <div class="tutorial-actions">
+            <button id="tutorialPrev" class="ghost-action" type="button">上一页</button>
+            <button id="tutorialNext" class="primary-action" type="button">下一页</button>
+          </div>
+        </section>
+      </div>
+
       <div id="toast" class="toast hidden" role="status"></div>
     </div>
 
-    <script src="API配置文件/local-config.js?v=V2.15"></script>
-    <script src="historical-knowledge.js?v=V2.15"></script>
-    <script src="js/config.js?v=V2.15"></script>
-    <script src="js/state-dom.js?v=V2.15"></script>
-    <script src="js/lifecycle-rules.js?v=V2.15"></script>
-    <script src="js/uploads-editor-translator.js?v=V2.15"></script>
-    <script src="js/ai-workflow.js?v=V2.15"></script>
-    <script src="js/assets-detection.js?v=V2.15"></script>
-    <script src="js/rendering.js?v=V2.15"></script>
-    <script src="js/naming-knowledge.js?v=V2.15"></script>
-    <script src="js/export-template-storage.js?v=V2.15"></script>
-    <script src="js/toast.js?v=V2.15"></script>
-    <script src="js/main.js?v=V2.15"></script>
+    <script src="API配置文件/local-config.js?v=V2.20"></script>
+    <script src="historical-knowledge.js?v=V2.20"></script>
+    <script src="js/config.js?v=V2.20"></script>
+    <script src="js/state-dom.js?v=V2.20"></script>
+    <script src="js/lifecycle-rules.js?v=V2.20"></script>
+    <script src="js/uploads-editor-translator.js?v=V2.20"></script>
+    <script src="js/ai-workflow.js?v=V2.20"></script>
+    <script src="js/assets-detection.js?v=V2.20"></script>
+    <script src="js/rendering.js?v=V2.20"></script>
+    <script src="js/naming-knowledge.js?v=V2.20"></script>
+    <script src="js/export-template-storage.js?v=V2.20"></script>
+    <script src="js/toast.js?v=V2.20"></script>
+    <script src="js/main.js?v=V2.20"></script>
   </body>
 </html>

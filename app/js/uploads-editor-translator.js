@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.15 module: uploads-editor-translator.js */
+/* NGRAI AutoName Tool V2.20 module: uploads-editor-translator.js */
 function bindUploads() {
   els.folderInput.addEventListener("change", (event) => addFiles([...event.target.files]));
   els.singleInput.addEventListener("change", (event) => addFiles([...event.target.files]));
@@ -167,6 +167,7 @@ async function applyTranslatorNameToSelectedAsset() {
     asset.recommendations = [...new Set(asset.recommendations)].slice(0, 5);
   }
   selectedId = asset.id;
+  saveCurrentNamingSession();
   renderAssetList();
   els.translatorOutput.textContent = "已填入最终名称：" + asset.finalBaseName + "\n中文含义：" + await explainNameWithTranslation(asset.finalBaseName);
   showToast("已填入选中图片的最终名称");
@@ -279,6 +280,8 @@ function bindEditor() {
   els.namingModeSelect.addEventListener("change", updateNamingRunButton);
   els.runSelectedNaming.addEventListener("click", runSelectedNaming);
   els.stopNaming.addEventListener("click", stopNaming);
+  els.newNamingSession.addEventListener("click", createNamingSession);
+  els.selectVisibleAssets.addEventListener("change", toggleVisibleAssetSelection);
   els.batchOperationMode.addEventListener("change", syncBatchOperationMode);
   els.applyBatchOperation.addEventListener("click", applyBatchOperation);
   els.problemFilter.addEventListener("click", toggleProblemFilter);

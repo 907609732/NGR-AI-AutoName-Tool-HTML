@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.15 module: lifecycle-rules.js */
+/* NGRAI AutoName Tool V2.20 module: lifecycle-rules.js */
 function init() {
   bindNavigation();
   bindRules();
@@ -19,8 +19,10 @@ function init() {
   renderDetectionProfileSelect();
   renderDetectionList();
   syncWorkProjectFields();
+  initNamingSessions();
   updateRulePreview();
   updateActiveRuleText();
+  renderAssetList();
 }
 
 function protectEditableShortcuts(root = document) {
@@ -34,6 +36,7 @@ function protectEditableShortcuts(root = document) {
 }
 
 function bindNavigation() {
+  els.tutorialEntry.addEventListener("click", openDetectionTutorial);
   els.guideEntry.addEventListener("click", startGuideTour);
   els.rulesEntry.addEventListener("click", () => showView("rules"));
   els.workEntry.addEventListener("click", () => showView("work"));
@@ -47,8 +50,18 @@ function bindNavigation() {
     else moveGuideStep(1);
   });
   els.guideClose.addEventListener("click", closeGuideTour);
+  els.tutorialPrev.addEventListener("click", () => moveDetectionTutorial(-1));
+  els.tutorialNext.addEventListener("click", () => moveDetectionTutorial(1));
+  els.tutorialClose.addEventListener("click", closeDetectionTutorial);
+  els.tutorialOverlay.addEventListener("click", (event) => {
+    if (event.target === els.tutorialOverlay) closeDetectionTutorial();
+  });
   window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !els.tutorialOverlay.classList.contains("hidden")) closeDetectionTutorial();
     if (event.key === "Escape" && !els.guideOverlay.classList.contains("hidden")) closeGuideTour();
+    if (els.tutorialOverlay.classList.contains("hidden")) return;
+    if (event.key === "ArrowLeft") moveDetectionTutorial(-1);
+    if (event.key === "ArrowRight") moveDetectionTutorial(1);
   });
   window.addEventListener("resize", () => {
     if (!els.guideOverlay.classList.contains("hidden")) showGuideStep(guideStepIndex);
@@ -67,6 +80,52 @@ function showView(name) {
     detectionSettings: "单独配置 UI 切图检测项目组和分辨率参数。",
   };
   els.pageHint.textContent = hints[name];
+}
+
+const detectionTutorialSlides = Array.from({ length: 10 }, (_, index) => {
+  const page = String(index + 1).padStart(2, "0");
+  return {
+    src: "assets/tutorials/detection/slide-" + page + ".png",
+    alt: "UI切图检测教程第 " + (index + 1) + " 页",
+  };
+});
+
+function openDetectionTutorial() {
+  tutorialSlideIndex = 0;
+  preloadDetectionTutorialSlides();
+  els.tutorialOverlay.classList.remove("hidden");
+  els.tutorialOverlay.setAttribute("aria-hidden", "false");
+  renderDetectionTutorialSlide();
+}
+
+function closeDetectionTutorial() {
+  els.tutorialOverlay.classList.add("hidden");
+  els.tutorialOverlay.setAttribute("aria-hidden", "true");
+}
+
+function moveDetectionTutorial(direction) {
+  const nextIndex = Math.max(0, Math.min(tutorialSlideIndex + direction, detectionTutorialSlides.length - 1));
+  if (nextIndex === tutorialSlideIndex) return;
+  tutorialSlideIndex = nextIndex;
+  renderDetectionTutorialSlide();
+}
+
+function renderDetectionTutorialSlide() {
+  const slide = detectionTutorialSlides[tutorialSlideIndex];
+  els.tutorialImage.src = slide.src;
+  els.tutorialImage.alt = slide.alt;
+  els.tutorialStepCount.textContent = tutorialSlideIndex + 1 + " / " + detectionTutorialSlides.length;
+  els.tutorialPrev.disabled = tutorialSlideIndex === 0;
+  els.tutorialNext.disabled = tutorialSlideIndex === detectionTutorialSlides.length - 1;
+  els.tutorialNext.textContent = tutorialSlideIndex === detectionTutorialSlides.length - 1 ? "已到最后一页" : "下一页";
+}
+
+function preloadDetectionTutorialSlides() {
+  detectionTutorialSlides.forEach((slide) => {
+    if (slide.image) return;
+    slide.image = new Image();
+    slide.image.src = slide.src;
+  });
 }
 
 const guideSteps = [
@@ -92,7 +151,7 @@ const guideSteps = [
     view: "work",
     selector: ".naming-batch-tools",
     title: "填写当前界面命名参数",
-    text: "这里控制当前批次的前缀、工程名、界面名、批量操作和列表显示。工程名只使用你填写的内容。",
+    text: "这里控制当前批次的前缀、工程名、界面名、批量添加后缀和序号以及列表显示。工程名只使用你填写的内容。",
   },
   {
     view: "work",
@@ -182,23 +241,29 @@ function closeGuideTour() {
 }
 
 function bindRules() {
-  [els.projectConfigName, els.projectConfigDescription, els.schemeName, els.basePrefix, els.projectName, els.separator, els.tags, els.pageTerms, els.componentTerms, els.stateTerms, els.filenameRules, els.contextDocs].forEach((input) => {
+  [els.projectConfigName, els.projectConfigDescription, els.schemeName, els.basePrefix, els.projectName, els.separator, els.tags, els.pageTerms, els.componentTerms, els.stateTerms, els.filenameRules, els.contextDocs, els.aiPromptText].forEach((input) => {
     input.addEventListener("input", () => {
       rules = collectRulesForm();
       if (input === els.projectName) els.workProjectName.value = rules.projectName;
       updateRulePreview();
       updateActiveRuleText();
       renderAssetList();
+      syncSessionNamingParams();
     });
   });
 
-  els.projectSelect.addEventListener("change", () => switchProject(els.projectSelect.value));
+  els.projectSelect.addEventListener("change", () => {
+    saveCurrentNamingSession();
+    switchProject(els.projectSelect.value);
+  });
 
   els.schemeSelect.addEventListener("change", () => {
+    saveCurrentNamingSession();
     switchScheme(els.schemeSelect.value);
   });
 
   els.workSchemeSelect.addEventListener("change", () => {
+    saveCurrentNamingSession();
     switchScheme(els.workSchemeSelect.value);
   });
 
@@ -212,6 +277,7 @@ function bindRules() {
     updateRulePreview();
     updateActiveRuleText();
     renderAssetList();
+    syncSessionNamingParams();
   });
 
   els.workBasePrefix.addEventListener("change", () => {
@@ -222,6 +288,7 @@ function bindRules() {
     updateRulePreview();
     updateActiveRuleText();
     renderAssetList();
+    syncSessionNamingParams();
   });
 
   els.workProjectName.addEventListener("input", () => {
@@ -231,6 +298,7 @@ function bindRules() {
     updateRulePreview();
     updateActiveRuleText();
     renderAssetList();
+    syncSessionNamingParams();
   });
 
   els.workViewName.addEventListener("input", () => {
@@ -239,6 +307,7 @@ function bindRules() {
     updateRulePreview();
     updateActiveRuleText();
     renderAssetList();
+    syncSessionNamingParams();
   });
 
   els.saveRules.addEventListener("click", () => {
@@ -252,6 +321,7 @@ function bindRules() {
     updateRulePreview();
     updateActiveRuleText();
     renderAssetList();
+    syncSessionNamingParams();
     showToast("项目配置方案已保存");
   });
 
@@ -266,6 +336,7 @@ function bindRules() {
     updateRulePreview();
     updateActiveRuleText();
     renderAssetList();
+    syncSessionNamingParams();
     showToast("已保存配置方案：" + rules.schemeName);
   });
 
@@ -288,6 +359,7 @@ function bindRules() {
     updateRulePreview();
     updateActiveRuleText();
     renderAssetList();
+    syncSessionNamingParams();
     showToast("已恢复默认规则");
   });
 
@@ -317,6 +389,8 @@ function bindRules() {
 
   els.exportSchemeTemplate.addEventListener("click", exportSchemeTemplate);
   els.importSchemeTemplate.addEventListener("change", importSchemeTemplate);
+  els.exportPromptText.addEventListener("click", exportPromptText);
+  els.importPromptText.addEventListener("change", importPromptText);
 }
 
 function switchScheme(schemeName) {
@@ -333,6 +407,7 @@ function switchScheme(schemeName) {
   updateRulePreview();
   updateActiveRuleText();
   renderAssetList();
+  syncSessionNamingParams();
   showToast("已切换配置方案");
 }
 
@@ -365,6 +440,7 @@ function createProject() {
   updateRulePreview();
   updateActiveRuleText();
   renderAssetList();
+  syncSessionNamingParams();
   showToast("已新建项目");
 }
 
@@ -385,6 +461,7 @@ function switchProject(projectId) {
   updateRulePreview();
   updateActiveRuleText();
   renderAssetList();
+  syncSessionNamingParams();
   showToast("已切换项目");
 }
 
@@ -416,6 +493,7 @@ function deleteCurrentScheme() {
   updateRulePreview();
   updateActiveRuleText();
   renderAssetList();
+  syncSessionNamingParams();
   showToast("已删除配置方案");
 }
 
@@ -438,5 +516,6 @@ function deleteCurrentProject() {
   updateRulePreview();
   updateActiveRuleText();
   renderAssetList();
+  syncSessionNamingParams();
   showToast("已删除项目");
 }
