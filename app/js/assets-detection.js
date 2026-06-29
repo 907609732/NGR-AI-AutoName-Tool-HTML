@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.20 module: assets-detection.js */
+/* NGRAI AutoName Tool V2.23 module: assets-detection.js */
 function applyBatchSuffix() {
   const suffix = sanitizeName(els.batchSuffix.value);
   if (!suffix) {
@@ -379,6 +379,7 @@ async function fileToAsset(file) {
     dimensionIssue: Boolean(validation.problem),
     dimensionWarning: Boolean(validation.warning),
     dimensionIssueMessage: validation.reason || "",
+    dimensionInfoMessage: validation.info || "",
     checked: false,
     recommendations: [],
     finalBaseName: "",
@@ -433,20 +434,23 @@ function validateDetectionFormat(file) {
   return /\.png$/i.test(file.name) ? [] : ["注意导出切图格式，NGR只允许png格式，不允许其他格式"];
 }
 
+const NGR_2048_RISK_MESSAGE = "NGR原则上不支持1024分辨率以上的图片进引擎，单边2048的图片无法直接上传，需要通过走白名单审批，P4需要选择对应同意的owner进行审批。";
+const NGR_BACKGROUND_TIP_MESSAGE = "背景图规范分辨率是3440x1440；背景图左右两边不要忘记加带鱼屏渐变哦！";
+
 function getNgrSpecialDimensionSpec(width, height, profile) {
   const config = normalizeDetectionProfile(profile);
   if (width === config.backgroundWidth && height === config.backgroundHeight) {
     return {
       type: "background",
       label: "背景图",
-      message: "背景图规范分辨率是" + config.backgroundWidth + "x" + config.backgroundHeight,
+      message: NGR_BACKGROUND_TIP_MESSAGE,
     };
   }
   if (width === 2560 && height === 1440) {
     return {
       type: "pc-effect",
       label: "PC效果图",
-      message: "PC效果图尺寸是2560x1440；NGR不允许1024分辨率以上的普通切图进引擎，请确认不要作为引擎切图提交",
+      message: "请确认你出的是不是效果图，PC效果图尺寸是2560x1440；背景图规范3440x1440；NGR不允许1024分辨率以上的普通切图进引擎，请确认不要作为引擎切图提交",
     };
   }
   if (width === 2340 && height === 1080) {
@@ -468,6 +472,7 @@ function validateDetectionDimensions(dimensions, profile) {
   const maxSide = Math.max(width, height);
   const messages = [];
   const warnings = [];
+  const notes = [];
   if (config.mode === "planner") return validatePlannerDetectionDimensions(width, height);
   if (config.mode === "icon") return validateIconDetectionDimensions(width, height);
   const specialSpec = getNgrSpecialDimensionSpec(width, height, config);
@@ -477,10 +482,15 @@ function validateDetectionDimensions(dimensions, profile) {
   if (width % 2 !== 0 || height % 2 !== 0) {
     messages.push("分辨率不是双数，不允许单数");
   }
+  if (specialSpec?.type === "background") {
+    notes.push(specialSpec.message);
+  }
   if (specialSpec?.type === "pc-effect" || specialSpec?.type === "mobile-effect") {
     warnings.push(specialSpec.message);
   }
-  if (maxSide > config.maxSide && !isEngineException) {
+  if (maxSide === 2048 && !isEngineException) {
+    warnings.push(NGR_2048_RISK_MESSAGE);
+  } else if (maxSide > config.maxSide && !isEngineException) {
     messages.push("NGR不允许1024分辨率以上的图片进引擎；分辨率单边不能超过" + config.maxSide);
   }
   if (!specialSpec && maxSide > config.largeThreshold) {
@@ -496,6 +506,7 @@ function validateDetectionDimensions(dimensions, profile) {
     label,
     warnings,
     messages,
+    notes,
   };
 }
 
@@ -537,10 +548,13 @@ function validateUploadDimensions(dimensions) {
     return { valid: true, problem: true, category: "invalid", label: "问题图片", reason: "分辨率宽高不能是单数" };
   }
   if (specialSpec?.type === "background") {
-    return { valid: true, category: "background", label: specialSpec.label };
+    return { valid: true, category: "background", label: specialSpec.label, info: specialSpec.message };
   }
   if (specialSpec?.type === "pc-effect" || specialSpec?.type === "mobile-effect") {
     return { valid: true, warning: true, category: "effect", label: specialSpec.label, reason: specialSpec.message };
+  }
+  if (maxDimension === 2048) {
+    return { valid: true, warning: true, category: "large", label: "大图风险", reason: NGR_2048_RISK_MESSAGE };
   }
   if (maxDimension > 1024) {
     return { valid: true, problem: true, category: "invalid", label: "问题图片", reason: "NGR不允许1024分辨率以上的图片进引擎；分辨率单边不能超过1024" };

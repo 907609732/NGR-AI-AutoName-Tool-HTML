@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.20 module: rendering.js */
+/* NGRAI AutoName Tool V2.23 module: rendering.js */
 function renderAssetList() {
   const problemCount = assets.filter((asset) => asset.dimensionIssue).length;
   els.fileCount.textContent = assets.length + " 张" + (problemCount ? " / " + problemCount + " 张问题" : "");
@@ -61,7 +61,7 @@ function renderAssetList() {
     afterName.classList.add("full-line", "after-name-line");
     const resolution = createMetaLine("分辨率", formatResolution(asset.dimensions));
     const sizeCategory = createMetaLine("规格", asset.sizeCategoryLabel || getSizeCategoryLabel(asset.dimensions));
-    const dimensionCheck = createMetaLine("分辨率检查", asset.dimensionIssue || asset.dimensionWarning ? asset.dimensionIssueMessage : "通过");
+    const dimensionCheck = createMetaLine("分辨率检查", asset.dimensionIssue || asset.dimensionWarning ? asset.dimensionIssueMessage : asset.dimensionInfoMessage || "通过");
     dimensionCheck.classList.add("full-line");
     dimensionCheck.classList.toggle("warning-line", asset.dimensionIssue || asset.dimensionWarning);
     const duplicateStatus = getDuplicateStatus(asset, duplicateContext);
@@ -408,7 +408,7 @@ function renderDetectionList() {
       createMetaLine("文件名称", asset.name),
       createMetaLine("分辨率", formatResolution(asset.dimensions)),
       createMetaLine("规格标注", asset.label),
-      createMetaLine("检测结果", asset.hasIssue ? asset.messages.join("；") : asset.hasWarning ? asset.warnings.join("；") : "通过"),
+      createMetaLine("检测结果", asset.hasIssue ? asset.messages.join("；") : asset.hasWarning ? asset.warnings.join("；") : (asset.notes || []).join("；") || "通过"),
       status
     );
 
@@ -454,8 +454,9 @@ function getDetectionWarningSortKey(asset) {
 function getDetectionWarningType(asset) {
   const warnings = asset.warnings || [];
   if (warnings.some((message) => message.startsWith("疑似重复资源"))) return "01-疑似重复资源";
-  if (warnings.some((message) => message.includes("效果图尺寸"))) return "02-效果图尺寸提示";
-  if (warnings.some((message) => message.includes("1024"))) return "03-1024以上提示";
+  if (warnings.some((message) => message.includes("单边2048") || message.includes("白名单审批"))) return "02-2048白名单风险";
+  if (warnings.some((message) => message.includes("效果图尺寸"))) return "03-效果图尺寸提示";
+  if (warnings.some((message) => message.includes("1024"))) return "04-1024以上提示";
   return "99-其他警告";
 }
 

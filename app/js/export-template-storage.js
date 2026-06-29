@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.20 module: export-template-storage.js */
+/* NGRAI AutoName Tool V2.23 module: export-template-storage.js */
 function resetAppLocalStorageOnVersionChange() {
   const savedVersion = localStorage.getItem(APP_VERSION_KEY);
   if (savedVersion === APP_VERSION) return;

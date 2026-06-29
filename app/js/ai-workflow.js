@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.20 module: ai-workflow.js */
+/* NGRAI AutoName Tool V2.23 module: ai-workflow.js */
 async function runNaming() {
   return runNamingWorkflow({ useAi: true });
 }
