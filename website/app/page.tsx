@@ -1,3 +1,5 @@
+import { MotionController } from "./motion";
+
 const githubUrl = "https://github.com/907609732/NGR-AI-AutoName-Tool";
 
 const features = [
@@ -64,7 +66,8 @@ function LogoMark({ compact = false }: { compact?: boolean }) {
 export default function Home() {
   return (
     <main>
-      <header className="site-header">
+      <MotionController />
+      <header className="site-header" data-site-header>
         <a className="brand" href="#top" aria-label="NGR AssetPilot 首页">
           <LogoMark compact />
           <span className="brand-copy">
