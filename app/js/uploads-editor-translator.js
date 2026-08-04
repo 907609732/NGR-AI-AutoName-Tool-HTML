@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.23 module: uploads-editor-translator.js */
+/* NGR AssetPilot V2.23 module: uploads-editor-translator.js */
 function bindUploads() {
   els.folderInput.addEventListener("change", (event) => addFiles([...event.target.files]));
   els.singleInput.addEventListener("change", (event) => addFiles([...event.target.files]));

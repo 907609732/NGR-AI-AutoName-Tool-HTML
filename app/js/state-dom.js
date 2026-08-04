@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.23 module: state-dom.js */
+/* NGR AssetPilot V2.23 module: state-dom.js */
 let projects;
 let activeProjectId;
 let schemes;

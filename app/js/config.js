@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.23 module: config.js */
+/* NGR AssetPilot V2.23 module: config.js */
 const APP_VERSION = "V2.23";
 const APP_VERSION_KEY = "ngr-ai-autoname-app-version";
 const STORAGE_KEY = "ngr-ai-autoname-rules";

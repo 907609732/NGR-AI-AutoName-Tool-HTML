@@ -56,8 +56,58 @@ button {
   border-bottom: 1px solid var(--line);
 }
 
-.topbar-title {
+.brand-lockup {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-logo {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.48);
+  border-radius: 14px;
+  background: linear-gradient(145deg, #0f646d 0%, #177e89 48%, #28a9a5 100%);
+  box-shadow: 0 9px 22px rgba(15, 100, 109, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.brand-logo::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.44);
+  border-radius: 50%;
+}
+
+.brand-logo::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 24px;
+  background: #fff;
+  clip-path: polygon(50% 0, 100% 100%, 50% 77%, 0 100%);
+  transform: rotate(28deg);
+  filter: drop-shadow(0 2px 2px rgba(5, 64, 72, 0.2));
+}
+
+.brand-logo-core {
+  position: relative;
+  z-index: 1;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #bdf8ea;
+  box-shadow: 0 0 0 2px rgba(15, 100, 109, 0.42);
+}
+
+.topbar-title {
   min-width: 0;
 }
 
@@ -66,6 +116,22 @@ button {
   font-size: 21px;
   line-height: 1.25;
   letter-spacing: 0;
+}
+
+.brand-en {
+  font-weight: 850;
+  letter-spacing: -0.02em;
+}
+
+.brand-divider {
+  margin: 0 2px;
+  color: var(--line);
+  font-weight: 400;
+}
+
+.brand-cn {
+  color: var(--primary-strong);
+  font-weight: 760;
 }
 
 .version-badge {
@@ -81,6 +147,17 @@ button {
   font-size: 12px;
   font-weight: 800;
   vertical-align: middle;
+}
+
+.version-date {
+  display: inline-block;
+  margin-left: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  vertical-align: middle;
+  white-space: nowrap;
 }
 
 .topbar p {
@@ -963,6 +1040,34 @@ button:disabled {
 
   .topbar {
     padding: 10px 14px;
+  }
+
+  .brand-lockup {
+    gap: 9px;
+  }
+
+  .brand-logo {
+    width: 38px;
+    height: 38px;
+    flex-basis: 38px;
+    border-radius: 12px;
+  }
+
+  .brand-logo::before {
+    inset: 7px;
+  }
+
+  .brand-logo::after {
+    width: 12px;
+    height: 21px;
+  }
+
+  .topbar h1 {
+    font-size: 17px;
+  }
+
+  .topbar-title p {
+    display: none;
   }
 
   .home-view.active,

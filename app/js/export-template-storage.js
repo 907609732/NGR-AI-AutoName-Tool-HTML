@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.23 module: export-template-storage.js */
+/* NGR AssetPilot V2.23 module: export-template-storage.js */
 function resetAppLocalStorageOnVersionChange() {
   const savedVersion = localStorage.getItem(APP_VERSION_KEY);
   if (savedVersion === APP_VERSION) return;
@@ -216,7 +216,7 @@ function buildExcelTemplate(current) {
     {
       name: "使用说明",
       rows: [
-        ["NGRAI辅助UI切图命名工具 - 方案模板"],
+        ["NGR AssetPilot｜AI资源领航 - 方案模板"],
         ["请在各页签中修改“值”或词库内容，保存后回到网页导入。"],
         ["基础配置页：维护方案名称、固定前缀、工程名、分隔符、常用标签。"],
         ["页面词库/组件词库/状态词库：每行填写一个英文命名词。"],

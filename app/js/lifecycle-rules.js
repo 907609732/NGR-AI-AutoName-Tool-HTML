@@ -1,4 +1,4 @@
-/* NGRAI AutoName Tool V2.23 module: lifecycle-rules.js */
+/* NGR AssetPilot V2.23 module: lifecycle-rules.js */
 function init() {
   bindNavigation();
   bindRules();
