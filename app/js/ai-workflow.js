@@ -1,4 +1,4 @@
-/* NGR AssetPilot V2.23 module: ai-workflow.js */
+/* NGR AssetPilot V2.25 module: ai-workflow.js */
 async function runNaming() {
   return runNamingWorkflow({ useAi: true });
 }

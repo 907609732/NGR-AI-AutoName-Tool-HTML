@@ -1,12 +1,12 @@
-/* NGR AssetPilot V2.23 module: export-template-storage.js */
+/* NGR AssetPilot V2.26 module: export-template-storage.js */
 function resetAppLocalStorageOnVersionChange() {
   const savedVersion = localStorage.getItem(APP_VERSION_KEY);
   if (savedVersion === APP_VERSION) return;
-  APP_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
   localStorage.setItem(APP_VERSION_KEY, APP_VERSION);
 }
 
 async function exportRenamedFiles() {
+  closeCompactActionMenu(els.exportMenu);
   if (!assets.length) {
     showToast("没有可导出的图片");
     return;
@@ -18,30 +18,120 @@ async function exportRenamedFiles() {
     showToast("还有图片没有最终名称，请先确认");
     return;
   }
-
-  if ("showDirectoryPicker" in window) {
-    try {
-      const dir = await window.showDirectoryPicker({ mode: "readwrite" });
-      for (const asset of assets) {
-        const fileHandle = await dir.getFileHandle(buildExportName(asset), { create: true });
-        const writable = await fileHandle.createWritable();
-        await writable.write(asset.file);
-        await writable.close();
-      }
-      showToast("导出完成，可在所选文件夹查看");
-    } catch (error) {
-      if (error.name !== "AbortError") showToast("导出失败，请检查浏览器文件夹权限");
-    }
+  const duplicate = findDuplicateExportAsset();
+  if (duplicate) {
+    selectedId = duplicate.id;
+    renderAssetList();
+    showToast("同一工程文件夹内存在重复文件名，请修改后再导出");
     return;
   }
 
-  assets.forEach((asset) => {
-    const link = document.createElement("a");
-    link.href = asset.url;
-    link.download = buildExportName(asset);
-    link.click();
+  const exportMode = els.exportModeSelect?.value || "folder";
+  els.exportFiles.disabled = true;
+
+  try {
+    if (exportMode === "zip") {
+      await exportAssetsAsZip();
+      return;
+    }
+
+    if (!("showDirectoryPicker" in window)) {
+      await exportAssetsAsZip();
+      showToast("当前浏览器不支持创建文件夹，已自动下载工程 ZIP 压缩包");
+      return;
+    }
+
+    const projectCount = await exportAssetsToProjectFolders();
+    showToast(projectCount > 1 ? `导出完成，已创建 ${projectCount} 个工程文件夹` : `导出完成，已创建工程文件夹：${buildExportProjectFolderName(assets[0])}`);
+  } catch (error) {
+    if (error.name !== "AbortError") {
+      console.error("导出命名图片失败", error);
+      showToast("导出失败，请检查浏览器权限或剩余磁盘空间");
+    }
+  } finally {
+    els.exportFiles.disabled = false;
+  }
+}
+
+async function exportAssetsToProjectFolders() {
+  const exportRoot = await window.showDirectoryPicker({ mode: "readwrite" });
+  const projectDirectories = new Map();
+
+  for (const asset of assets) {
+    const projectFolderName = buildExportProjectFolderName(asset);
+    let projectDirectory = projectDirectories.get(projectFolderName);
+    if (!projectDirectory) {
+      projectDirectory = await exportRoot.getDirectoryHandle(projectFolderName, { create: true });
+      projectDirectories.set(projectFolderName, projectDirectory);
+    }
+
+    const fileHandle = await projectDirectory.getFileHandle(buildExportName(asset), { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(asset.file);
+    await writable.close();
+  }
+
+  return projectDirectories.size;
+}
+
+async function exportAssetsAsZip() {
+  if (!window.fflate?.zipSync) throw new Error("ZIP 压缩组件未加载");
+
+  showToast("正在生成工程 ZIP 压缩包，请稍候");
+  const zipEntries = Object.create(null);
+  const projectFolderNames = new Set();
+
+  for (const asset of assets) {
+    const projectFolderName = buildExportProjectFolderName(asset);
+    projectFolderNames.add(projectFolderName);
+    zipEntries[`${projectFolderName}/${buildExportName(asset)}`] = new Uint8Array(await asset.file.arrayBuffer());
+  }
+
+  const zipBytes = window.fflate.zipSync(zipEntries, { level: 0 });
+  const blob = new Blob([zipBytes], { type: "application/zip" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = buildExportArchiveName([...projectFolderNames]);
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showToast(projectFolderNames.size > 1 ? `ZIP 已生成，包含 ${projectFolderNames.size} 个工程文件夹` : `ZIP 已生成：${link.download}`);
+}
+
+function buildExportProjectFolderName(asset) {
+  const projectName = buildAssetProjectName(asset)
+    .replace(/[. ]+$/g, "")
+    .slice(0, 120);
+  const safeName = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i.test(projectName) ? `_${projectName}` : projectName;
+  return safeName || "未命名工程";
+}
+
+function buildExportArchiveName(projectFolderNames) {
+  if (projectFolderNames.length === 1) return `${projectFolderNames[0]}.zip`;
+  const currentProjectName = sanitizeName(rules.projectName).replace(/[. ]+$/g, "");
+  return `${currentProjectName || "NGR_AssetPilot"}_多工程导出.zip`;
+}
+
+function findDuplicateExportAsset() {
+  const duplicateGroup = [...buildDuplicateExportGroups().values()].find((group) => group.length > 1);
+  return duplicateGroup?.[1] || null;
+}
+
+function buildExportPathKey(asset) {
+  if (!asset?.finalBaseName) return "";
+  return `${buildExportProjectFolderName(asset)}/${buildExportName(asset)}`.toLocaleLowerCase("en-US");
+}
+
+function buildDuplicateExportGroups(assetList = assets) {
+  const groups = new Map();
+  assetList.forEach((asset) => {
+    const exportPath = buildExportPathKey(asset);
+    if (!exportPath) return;
+    const group = groups.get(exportPath) || [];
+    group.push(asset);
+    groups.set(exportPath, group);
   });
-  showToast("浏览器不支持选择文件夹，已改为逐个下载");
+  return groups;
 }
 
 function buildExportName(asset) {

@@ -1,4 +1,4 @@
-/* NGR AssetPilot V2.23 module: toast.js */
+/* NGR AssetPilot V2.25 module: toast.js */
 function showToast(message) {
   window.clearTimeout(toastTimer);
   els.toast.textContent = message;

@@ -1,4 +1,4 @@
-/* NGR AssetPilot V2.23 module: lifecycle-rules.js */
+/* NGR AssetPilot V2.25 module: lifecycle-rules.js */
 function init() {
   bindNavigation();
   bindRules();
@@ -7,7 +7,7 @@ function init() {
   bindDetection();
   bindTranslator();
   protectEditableShortcuts();
-  fillListViewSortMode();
+  fillListDisplayControls();
   fillRulesForm();
   fillDetectionProfileForm();
   fillAiSettings();
@@ -169,8 +169,8 @@ const guideSteps = [
     view: "work",
     selector: "#translatorPanel",
     title: "使用翻译面板辅助命名",
-    text: "右侧翻译面板可以把中文文件名转成英文命名词，并一键填入当前选中图片的最终名称。",
-    beforeShow: () => els.translatorPanel.classList.remove("collapsed"),
+    text: "悬浮翻译窗口可以拖到任意位置，把中文文件名转成英文命名词，并一键填入当前选中图片的最终名称。",
+    beforeShow: () => openTranslatorPanel({ focusInput: false }),
   },
   {
     view: "detect",

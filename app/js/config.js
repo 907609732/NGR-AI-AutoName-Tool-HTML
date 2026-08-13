@@ -1,5 +1,5 @@
-/* NGR AssetPilot V2.23 module: config.js */
-const APP_VERSION = "V2.23";
+/* NGR AssetPilot V2.26 module: config.js */
+const APP_VERSION = "V2.26";
 const APP_VERSION_KEY = "ngr-ai-autoname-app-version";
 const STORAGE_KEY = "ngr-ai-autoname-rules";
 const SCHEME_KEY = "ngr-ai-autoname-rule-schemes";
@@ -11,6 +11,11 @@ const DETECTION_PROFILES_KEY = "ngr-ai-autoname-detection-profiles";
 const ACTIVE_DETECTION_PROFILE_KEY = "ngr-ai-autoname-active-detection-profile";
 const LIST_DISPLAY_MODE_KEY = "ngr-ai-autoname-list-display-mode";
 const LIST_SORT_MODE_KEY = "ngr-ai-autoname-list-sort-mode";
+const NAMING_WORKSPACE_DB_NAME = "ngr-assetpilot-naming-workspace";
+const NAMING_WORKSPACE_DB_VERSION = 1;
+const NAMING_WORKSPACE_KEY = "default";
+const NAMING_WORKSPACE_SAVE_DELAY = 700;
+const DEFAULT_ALBUM_SETTINGS = Object.freeze({ columns: 4, rows: 6, columnGap: 112, rowGap: 46 });
 const MEANING_CACHE_KEY = "ngr-ai-autoname-meaning-cache";
 const APP_STORAGE_KEYS = [
   STORAGE_KEY,

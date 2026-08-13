@@ -1,25 +1,36 @@
-/* NGR AssetPilot V2.23 module: rendering.js */
+/* NGR AssetPilot V2.26 module: rendering.js */
 function renderAssetList() {
-  const problemCount = assets.filter((asset) => asset.dimensionIssue).length;
-  els.fileCount.textContent = assets.length + " 张" + (problemCount ? " / " + problemCount + " 张问题" : "");
+  const duplicateContext = buildDuplicateStatusContext();
+  const problemCount = assets.filter((asset) => isNamingAssetProblem(asset, duplicateContext)).length;
+  const duplicateCount = assets.filter((asset) => getDuplicateStatus(asset, duplicateContext).kind === "batch").length;
+  els.fileCount.textContent = assets.length + " 张" + (problemCount ? " / " + problemCount + " 张问题" : "") + (duplicateCount ? " / " + duplicateCount + " 张重名" : "");
   renderNamingSessionList();
   syncSelectAllControl();
+  syncAssetWorkspaceMode();
   if (!assets.length) {
     els.assetList.className = "asset-list-body empty-state";
     els.assetList.textContent = "请先上传切图文件夹";
+    renderAlbumEditorPanel();
     return;
   }
-  const visibleAssets = getVisibleAssets();
+  const visibleAssets = getVisibleAssets(duplicateContext);
   if (!visibleAssets.length) {
     els.assetList.className = "asset-list-body empty-state";
-    els.assetList.textContent = "当前没有分辨率问题图片";
+    els.assetList.textContent = "当前没有问题图片";
     syncSelectAllControl();
+    renderAlbumEditorPanel();
+    return;
+  }
+
+  if (listDisplayMode === "album") {
+    renderAlbumAssetList(visibleAssets, duplicateContext);
+    renderAlbumEditorPanel();
+    protectEditableShortcuts(els.albumEditorPanel);
     return;
   }
 
   els.assetList.className = "asset-list-body" + (listDisplayMode === "compact" ? " compact-list-mode" : "");
   els.assetList.innerHTML = "";
-  const duplicateContext = buildDuplicateStatusContext();
   const renderLimit = Math.min(Math.max(assetRenderLimit || ASSET_RENDER_BATCH_SIZE, ASSET_RENDER_BATCH_SIZE), visibleAssets.length);
   const renderedAssets = visibleAssets.slice(0, renderLimit);
   if (visibleAssets.length > renderLimit) {
@@ -27,7 +38,9 @@ function renderAssetList() {
   }
   renderedAssets.forEach((asset) => {
     const row = document.createElement("div");
-    row.className = "asset-item" + (asset.dimensionIssue ? " has-issue" : asset.dimensionWarning ? " has-warning" : "") + (asset.id === selectedId ? " active" : "");
+    const duplicateStatus = getDuplicateStatus(asset, duplicateContext);
+    row.className = "asset-item" + (asset.dimensionIssue ? " has-issue" : duplicateStatus.hasIssue ? " has-duplicate" : asset.dimensionWarning ? " has-warning" : "") + (asset.id === selectedId ? " active" : "");
+    row.dataset.assetId = asset.id;
     row.addEventListener("click", (event) => {
       if (event.target.closest(".asset-meta") && window.getSelection?.().toString().trim()) return;
       selectedId = asset.id;
@@ -64,14 +77,13 @@ function renderAssetList() {
     const dimensionCheck = createMetaLine("分辨率检查", asset.dimensionIssue || asset.dimensionWarning ? asset.dimensionIssueMessage : asset.dimensionInfoMessage || "通过");
     dimensionCheck.classList.add("full-line");
     dimensionCheck.classList.toggle("warning-line", asset.dimensionIssue || asset.dimensionWarning);
-    const duplicateStatus = getDuplicateStatus(asset, duplicateContext);
     const duplicateCheck = createMetaLine("重名检测", duplicateStatus.message);
+    duplicateCheck.classList.add("duplicate-check-line");
     duplicateCheck.classList.toggle("warning-line", duplicateStatus.hasIssue);
     const historyMatch = duplicateContext.historicalMatch;
     const historyLine = createMetaLine("历史工程", historyMatch ? historyMatch.name + " / " + historyMatch.fileCount + " 张" : "未匹配");
     const status = document.createElement("span");
-    status.className = "status-badge status-" + getAssetStatus(asset);
-    status.textContent = getAssetStatusText(asset);
+    applyNamingStatusBadge(status, asset, duplicateStatus);
     const statusHint = document.createElement("em");
     statusHint.textContent = asset.statusMessage || "";
     text.append(beforeName, afterName, resolution, sizeCategory, dimensionCheck, duplicateCheck, historyLine, status, statusHint);
@@ -105,6 +117,7 @@ function renderAssetList() {
       asset.customBasePrefix = prefixInput.value === "" ? "__none" : prefixInput.value;
       afterName.querySelector("strong").textContent = asset.finalBaseName ? buildExportName(asset) : "待命名";
       saveCurrentNamingSession();
+      syncDuplicateNameIndicators();
     });
     prefix.append(prefixLabel, prefixInput);
 
@@ -121,6 +134,7 @@ function renderAssetList() {
       asset.customProjectName = sanitizeName(projectInput.value);
       afterName.querySelector("strong").textContent = asset.finalBaseName ? buildExportName(asset) : "待命名";
       saveCurrentNamingSession();
+      syncDuplicateNameIndicators();
     });
     project.append(projectLabel, projectInput);
 
@@ -137,6 +151,7 @@ function renderAssetList() {
       asset.customViewName = sanitizeName(viewInput.value);
       afterName.querySelector("strong").textContent = asset.finalBaseName ? buildExportName(asset) : "待命名";
       saveCurrentNamingSession();
+      syncDuplicateNameIndicators();
     });
     view.append(viewLabel, viewInput);
 
@@ -190,6 +205,10 @@ function renderAssetList() {
       finalMeaning.dataset.meaningKey = getMeaningKey(asset.finalBaseName);
       finalMeaning.textContent = "中文含义：" + getDisplayMeaning(asset.finalBaseName);
       saveCurrentNamingSession();
+      syncDuplicateNameIndicators();
+    });
+    finalInput.addEventListener("blur", () => {
+      if (showProblemOnly) renderAssetList();
     });
     finalField.append(finalInput, finalMeaning);
     finalLabel.append(finalText, finalField);
@@ -232,6 +251,7 @@ function renderAssetList() {
           duplicateCheck.querySelector("strong").textContent = nextDuplicateStatus.message;
           duplicateCheck.classList.toggle("warning-line", nextDuplicateStatus.hasIssue);
           saveCurrentNamingSession();
+          syncDuplicateNameIndicators();
           renderLexiconTerms();
         });
         chips.appendChild(chip);
@@ -266,6 +286,340 @@ function renderAssetList() {
   protectEditableShortcuts(els.assetList);
 }
 
+function syncAssetWorkspaceMode() {
+  if (!els.workspace) return;
+  const albumMode = listDisplayMode === "album";
+  const hasEditor = albumMode && albumEditorOpen && assets.some((asset) => asset.id === selectedId);
+  els.workspace.classList.toggle("album-mode", albumMode);
+  els.workspace.classList.toggle("album-editor-open", hasEditor);
+  els.albumEditorPanel?.classList.toggle("hidden", !hasEditor);
+}
+
+function renderAlbumAssetList(visibleAssets, duplicateContext = buildDuplicateStatusContext()) {
+  const settings = normalizeAlbumSettings(albumSettings);
+  albumSettings = settings;
+  const pageSize = settings.columns * settings.rows;
+  const pageCount = Math.max(1, Math.ceil(visibleAssets.length / pageSize));
+  albumPage = Math.min(normalizeAlbumPage(albumPage), pageCount);
+  const start = (albumPage - 1) * pageSize;
+  const pageAssets = visibleAssets.slice(start, start + pageSize);
+  els.assetList.className = "asset-list-body album-grid-mode";
+  els.assetList.innerHTML = "";
+  els.assetList.style.setProperty("--album-columns", settings.columns);
+  els.assetList.style.setProperty("--album-column-gap", settings.columnGap + "px");
+  els.assetList.style.setProperty("--album-row-gap", settings.rowGap + "px");
+  pageAssets.forEach((asset) => els.assetList.appendChild(createAlbumAssetCard(asset, duplicateContext)));
+  els.fileCount.textContent += ` / 第 ${albumPage}/${pageCount} 页·本页 ${pageAssets.length} 张`;
+  renderAlbumPager(pageCount);
+  saveCurrentNamingSession({ persist: false });
+}
+
+function createAlbumAssetCard(asset, duplicateContext = buildDuplicateStatusContext()) {
+  const card = document.createElement("article");
+  const duplicateStatus = getDuplicateStatus(asset, duplicateContext);
+  card.className = "album-card" + (asset.id === selectedId ? " active" : "") + (asset.dimensionIssue ? " has-issue" : duplicateStatus.hasIssue ? " has-duplicate" : asset.dimensionWarning ? " has-warning" : "");
+  card.dataset.assetId = asset.id;
+  card.tabIndex = 0;
+  const select = document.createElement("input");
+  select.type = "checkbox";
+  select.className = "album-card-check";
+  select.checked = Boolean(asset.checked);
+  select.setAttribute("aria-label", `选中 ${asset.originalBase}${asset.extension}`);
+  select.addEventListener("click", (event) => event.stopPropagation());
+  select.addEventListener("change", () => {
+    asset.checked = select.checked;
+    saveCurrentNamingSession();
+    syncSelectAllControl();
+    renderNamingSessionList();
+  });
+  const media = document.createElement("div");
+  media.className = "album-card-media";
+  const image = document.createElement("img");
+  image.src = getAssetPreviewUrl(asset);
+  image.alt = asset.originalBase;
+  image.loading = "lazy";
+  image.decoding = "async";
+  media.appendChild(image);
+  const body = document.createElement("div");
+  body.className = "album-card-body";
+  const original = document.createElement("strong");
+  original.className = "album-original-name";
+  original.textContent = asset.originalBase + asset.extension;
+  original.title = original.textContent;
+  const exportName = document.createElement("span");
+  exportName.className = "album-export-name";
+  exportName.textContent = asset.finalBaseName ? buildExportName(asset) : "待命名";
+  exportName.title = exportName.textContent;
+  const status = document.createElement("span");
+  status.classList.add("album-card-status");
+  applyNamingStatusBadge(status, asset, duplicateStatus);
+  const duplicateHint = document.createElement("span");
+  duplicateHint.className = "album-duplicate-hint";
+  duplicateHint.textContent = duplicateStatus.hasIssue ? duplicateStatus.message : "";
+  duplicateHint.hidden = !duplicateStatus.hasIssue;
+  body.append(original, exportName, status, duplicateHint);
+  const open = () => {
+    selectedId = asset.id;
+    albumEditorOpen = true;
+    saveCurrentNamingSession();
+    renderAssetList();
+  };
+  card.addEventListener("click", open);
+  card.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    open();
+  });
+  card.append(select, media, body);
+  return card;
+}
+
+function renderAlbumPager(pageCount) {
+  const pager = document.createElement("div");
+  pager.className = "album-pager";
+  const previous = document.createElement("button");
+  previous.type = "button";
+  previous.className = "ghost-action";
+  previous.textContent = "上一页";
+  previous.disabled = albumPage <= 1;
+  const label = document.createElement("span");
+  label.textContent = `第 ${albumPage} / ${pageCount} 页`;
+  const next = document.createElement("button");
+  next.type = "button";
+  next.className = "ghost-action";
+  next.textContent = "下一页";
+  next.disabled = albumPage >= pageCount;
+  const changePage = (nextPage) => {
+    albumPage = Math.max(1, Math.min(nextPage, pageCount));
+    saveCurrentNamingSession();
+    renderAssetList();
+    els.assetList.scrollIntoView({ block: "start" });
+  };
+  previous.addEventListener("click", () => changePage(albumPage - 1));
+  next.addEventListener("click", () => changePage(albumPage + 1));
+  pager.append(previous, label, next);
+  els.assetList.appendChild(pager);
+}
+
+function renderAlbumEditorPanel() {
+  if (!els.albumEditorPanel) return;
+  const asset = assets.find((item) => item.id === selectedId);
+  if (listDisplayMode !== "album" || !albumEditorOpen || !asset) {
+    els.albumEditorPanel.innerHTML = "";
+    els.albumEditorPanel.classList.add("hidden");
+    syncAssetWorkspaceMode();
+    return;
+  }
+  els.albumEditorPanel.classList.remove("hidden");
+  els.albumEditorPanel.innerHTML = "";
+  els.albumEditorPanel.dataset.assetId = asset.id;
+  const head = document.createElement("div");
+  head.className = "album-editor-head";
+  const heading = document.createElement("div");
+  const eyebrow = document.createElement("span");
+  eyebrow.textContent = "画册图片编辑";
+  const title = document.createElement("strong");
+  title.textContent = asset.originalBase + asset.extension;
+  heading.append(eyebrow, title);
+  const close = document.createElement("button");
+  close.type = "button";
+  close.className = "settings-button";
+  close.textContent = "×";
+  close.title = "关闭编辑栏";
+  close.addEventListener("click", () => {
+    albumEditorOpen = false;
+    saveCurrentNamingSession();
+    renderAlbumEditorPanel();
+  });
+  head.append(heading, close);
+  const preview = document.createElement("div");
+  preview.className = "album-editor-preview";
+  const image = document.createElement("img");
+  image.src = getAssetPreviewUrl(asset);
+  image.alt = asset.originalBase;
+  const info = document.createElement("div");
+  info.className = "album-editor-info";
+  const output = document.createElement("strong");
+  output.className = "album-editor-export-name";
+  output.textContent = asset.finalBaseName ? buildExportName(asset) : "待命名";
+  const meta = document.createElement("span");
+  meta.textContent = `${formatResolution(asset.dimensions)} · ${asset.sizeCategoryLabel || getSizeCategoryLabel(asset.dimensions)}`;
+  const status = document.createElement("span");
+  const duplicateStatus = getDuplicateStatus(asset);
+  applyNamingStatusBadge(status, asset, duplicateStatus);
+  const duplicateNotice = document.createElement("span");
+  duplicateNotice.className = "album-duplicate-hint album-editor-duplicate-hint";
+  duplicateNotice.textContent = duplicateStatus.hasIssue ? duplicateStatus.message : "";
+  duplicateNotice.hidden = !duplicateStatus.hasIssue;
+  info.append(output, meta, status, duplicateNotice);
+  preview.append(image, info);
+  els.albumEditorPanel.append(head, preview, createAlbumNamingEditor(asset, output));
+  syncAssetWorkspaceMode();
+}
+
+function createAlbumNamingEditor(asset, outputNode) {
+  const editor = document.createElement("div");
+  editor.className = "album-naming-editor";
+  const updateOutput = () => {
+    const outputName = asset.finalBaseName ? buildExportName(asset) : "待命名";
+    outputNode.textContent = outputName;
+    const card = els.assetList.querySelector(`[data-asset-id="${CSS.escape(String(asset.id))}"]`);
+    if (card) {
+      card.querySelector(".album-export-name").textContent = outputName;
+      const badge = card.querySelector(".album-card-status");
+      applyNamingStatusBadge(badge, asset, getDuplicateStatus(asset));
+    }
+    saveCurrentNamingSession();
+    renderNamingSessionList();
+    syncDuplicateNameIndicators();
+  };
+  const fields = document.createElement("div");
+  fields.className = "album-editor-fields";
+  const prefix = createAlbumEditorSelect("前缀名", [
+    { value: "", label: "无" },
+    { value: "T_UI", label: "T_UI" },
+    { value: "T_UI_Img", label: "T_UI_Img" },
+    { value: "T_UI_Icon", label: "T_UI_Icon" },
+  ], buildAssetBasePrefix(asset), (value) => {
+    asset.customPrefix = "";
+    asset.customBasePrefix = value === "" ? "__none" : value;
+    updateOutput();
+  });
+  const project = createAlbumEditorInput("工程名", buildAssetProjectName(asset), rules.projectName, (value) => {
+    asset.customPrefix = "";
+    asset.customProjectName = sanitizeName(value);
+    updateOutput();
+  });
+  const view = createAlbumEditorInput("界面名", buildAssetViewName(asset), rules.viewName || "可不填", (value) => {
+    asset.customPrefix = "";
+    asset.customViewName = sanitizeName(value);
+    updateOutput();
+  });
+  const finalField = createAlbumEditorInput("最终名称", asset.finalBaseName, "请选择推荐名称或手动输入", (value, input) => {
+    asset.finalBaseName = formatNamingName(value);
+    input.value = asset.finalBaseName;
+    meaning.dataset.meaningKey = getMeaningKey(asset.finalBaseName);
+    meaning.textContent = "中文含义：" + getDisplayMeaning(asset.finalBaseName);
+    updateOutput();
+  });
+  finalField.classList.add("album-final-field");
+  const finalInput = finalField.querySelector("input");
+  const meaning = document.createElement("span");
+  meaning.className = "name-meaning";
+  meaning.dataset.meaningKey = getMeaningKey(asset.finalBaseName);
+  meaning.textContent = "中文含义：" + getDisplayMeaning(asset.finalBaseName);
+  finalField.appendChild(meaning);
+  fields.append(prefix, project, view, finalField);
+
+  const recommendations = document.createElement("section");
+  recommendations.className = "album-editor-recommendations";
+  const recommendationTitle = document.createElement("strong");
+  recommendationTitle.textContent = "AI 推荐命名";
+  const recommendationButtons = document.createElement("div");
+  recommendationButtons.className = "recommendations compact";
+  (asset.recommendations.length ? asset.recommendations : makeRecommendations(asset)).forEach((name) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "recommendation";
+    button.innerHTML = `<span class="recommendation-name"></span><span class="recommendation-meaning"></span>`;
+    button.querySelector(".recommendation-name").textContent = name;
+    button.querySelector(".recommendation-meaning").textContent = "中文含义：" + getDisplayMeaning(name);
+    button.addEventListener("click", () => {
+      asset.finalBaseName = formatNamingName(name);
+      finalInput.value = asset.finalBaseName;
+      meaning.textContent = "中文含义：" + getDisplayMeaning(asset.finalBaseName);
+      updateOutput();
+      showToast("已填入推荐名称");
+    });
+    recommendationButtons.appendChild(button);
+  });
+  recommendations.append(recommendationTitle, recommendationButtons);
+
+  const lexicon = document.createElement("details");
+  lexicon.className = "inline-lexicon album-editor-lexicon";
+  lexicon.open = Boolean(asset.lexiconOpen);
+  const summary = document.createElement("summary");
+  summary.textContent = "词库";
+  const content = document.createElement("div");
+  content.className = "lexicon-content";
+  const tabs = document.createElement("div");
+  tabs.className = "lexicon-tabs";
+  const chips = document.createElement("div");
+  chips.className = "lexicon-chips";
+  const categories = buildLexiconCategories();
+  if (!categories.some((category) => category.title === activeLexiconCategory)) activeLexiconCategory = categories[0]?.title || "";
+  const renderTerms = () => {
+    chips.innerHTML = "";
+    const current = new Set(cleanNamingName(asset.finalBaseName).split(/_+/).map((part) => part.toLowerCase()).filter(Boolean));
+    const category = categories.find((item) => item.title === activeLexiconCategory) || categories[0];
+    (category?.terms || []).forEach((term) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "lexicon-chip" + (current.has(term.toLowerCase()) ? " selected" : "");
+      chip.textContent = term;
+      chip.addEventListener("click", () => {
+        asset.finalBaseName = toggleLexiconTerm(asset.finalBaseName, term);
+        finalInput.value = asset.finalBaseName;
+        meaning.textContent = "中文含义：" + getDisplayMeaning(asset.finalBaseName);
+        updateOutput();
+        renderTerms();
+      });
+      chips.appendChild(chip);
+    });
+  };
+  categories.forEach((category) => {
+    const tab = document.createElement("button");
+    tab.type = "button";
+    tab.className = "lexicon-tab" + (category.title === activeLexiconCategory ? " active" : "");
+    tab.textContent = category.title;
+    tab.addEventListener("click", () => {
+      activeLexiconCategory = category.title;
+      tabs.querySelectorAll(".lexicon-tab").forEach((node) => node.classList.toggle("active", node === tab));
+      renderTerms();
+    });
+    tabs.appendChild(tab);
+  });
+  lexicon.addEventListener("toggle", () => {
+    asset.lexiconOpen = lexicon.open;
+    saveCurrentNamingSession();
+  });
+  renderTerms();
+  content.append(tabs, chips);
+  lexicon.append(summary, content);
+  editor.append(fields, recommendations, lexicon);
+  return editor;
+}
+
+function createAlbumEditorInput(labelText, value, placeholder, onInput) {
+  const label = document.createElement("label");
+  const span = document.createElement("span");
+  span.textContent = labelText;
+  const input = document.createElement("input");
+  input.type = "text";
+  input.value = value || "";
+  input.placeholder = placeholder || "";
+  input.addEventListener("input", () => onInput(input.value, input));
+  label.append(span, input);
+  return label;
+}
+
+function createAlbumEditorSelect(labelText, items, value, onChange) {
+  const label = document.createElement("label");
+  const span = document.createElement("span");
+  span.textContent = labelText;
+  const select = document.createElement("select");
+  items.forEach((item) => {
+    const option = document.createElement("option");
+    option.value = item.value;
+    option.textContent = item.label;
+    option.selected = item.value === value;
+    select.appendChild(option);
+  });
+  select.addEventListener("change", () => onChange(select.value));
+  label.append(span, select);
+  return label;
+}
+
 function renderNamingSessionList() {
   if (!els.namingSessionList) return;
   if (!namingSessions.length) {
@@ -276,7 +630,9 @@ function renderNamingSessionList() {
   namingSessions.forEach((session) => {
     const sessionAssets = session.id === activeNamingSessionId ? assets : session.assets || [];
     const doneCount = sessionAssets.filter((asset) => asset.finalBaseName).length;
-    const issueCount = sessionAssets.filter((asset) => asset.dimensionIssue).length;
+    const sessionDuplicateContext = buildDuplicateStatusContext(sessionAssets);
+    const issueCount = sessionAssets.filter((asset) => isNamingAssetProblem(asset, sessionDuplicateContext)).length;
+    const duplicateCount = sessionAssets.filter((asset) => getDuplicateStatus(asset, sessionDuplicateContext).kind === "batch").length;
     const button = document.createElement("div");
     button.setAttribute("role", "button");
     button.tabIndex = 0;
@@ -290,7 +646,7 @@ function renderNamingSessionList() {
       renameNamingSession(session.id);
     });
     const meta = document.createElement("span");
-    meta.textContent = sessionAssets.length + " 张 / 完成 " + doneCount + (issueCount ? " / 问题 " + issueCount : "");
+    meta.textContent = sessionAssets.length + " 张 / 完成 " + doneCount + (issueCount ? " / 问题 " + issueCount : "") + (duplicateCount ? " / 重名 " + duplicateCount : "");
     const deleteButton = document.createElement("button");
     deleteButton.type = "button";
     deleteButton.className = "session-delete";
@@ -312,24 +668,52 @@ function renderNamingSessionList() {
   });
 }
 
-function buildDuplicateStatusContext() {
-  const counts = new Map();
-  assets.forEach((asset) => {
-    if (!asset.finalBaseName) return;
-    const exportName = buildExportName(asset).toLowerCase();
-    counts.set(exportName, (counts.get(exportName) || 0) + 1);
-  });
+function buildDuplicateStatusContext(assetList = assets) {
+  const groups = buildDuplicateExportGroups(assetList);
   const historicalMatch = getHistoricalModuleMatch();
   const historicalNames = new Set((historicalMatch?.filenames || []).map((name) => String(name).toLowerCase()));
-  return { counts, historicalMatch, historicalNames };
+  return { groups, historicalMatch, historicalNames };
 }
 
 function loadListDisplayMode() {
-  return localStorage.getItem(LIST_DISPLAY_MODE_KEY) === "compact" ? "compact" : "full";
+  return normalizeListDisplayMode(localStorage.getItem(LIST_DISPLAY_MODE_KEY));
 }
 
-function fillListViewSortMode() {
-  els.listViewSortMode.value = listDisplayMode + ":" + listSortMode;
+function normalizeListDisplayMode(mode) {
+  return ["full", "compact", "album"].includes(mode) ? mode : "full";
+}
+
+function normalizeAlbumSettingValue(value, fallback, min, max) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? Math.max(min, Math.min(max, parsed)) : fallback;
+}
+
+function normalizeAlbumSettings(settings = {}) {
+  return {
+    columns: normalizeAlbumSettingValue(settings.columns, DEFAULT_ALBUM_SETTINGS.columns, 1, 12),
+    rows: normalizeAlbumSettingValue(settings.rows, DEFAULT_ALBUM_SETTINGS.rows, 1, 20),
+    columnGap: normalizeAlbumSettingValue(settings.columnGap, DEFAULT_ALBUM_SETTINGS.columnGap, 0, 200),
+    rowGap: normalizeAlbumSettingValue(settings.rowGap, DEFAULT_ALBUM_SETTINGS.rowGap, 0, 200),
+  };
+}
+
+function normalizeAlbumPage(value) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+}
+
+function fillListDisplayControls() {
+  if (!els.listDisplayModeSelect) return;
+  albumSettings = normalizeAlbumSettings(albumSettings);
+  els.listDisplayModeSelect.value = normalizeListDisplayMode(listDisplayMode);
+  els.listSortModeSelect.value = normalizeListSortMode(listSortMode);
+  els.albumGridSettings.classList.toggle("hidden", listDisplayMode !== "album");
+  els.albumColumns.value = albumSettings.columns;
+  els.albumRows.value = albumSettings.rows;
+  els.albumColumnGap.value = albumSettings.columnGap;
+  els.albumRowGap.value = albumSettings.rowGap;
+  const summary = els.albumGridSettings.querySelector(".album-grid-summary");
+  if (summary) summary.textContent = `${albumSettings.columns} × ${albumSettings.rows}，单页 ${albumSettings.columns * albumSettings.rows} 张`;
 }
 
 function loadListSortMode() {
@@ -340,16 +724,8 @@ function normalizeListSortMode(mode) {
   return ["upload", "name-asc", "name-desc"].includes(mode) ? mode : "name-asc";
 }
 
-function parseListViewSortMode(value) {
-  const [displayMode, sortMode] = String(value || "").split(":");
-  return {
-    displayMode: displayMode === "compact" ? "compact" : "full",
-    sortMode: normalizeListSortMode(sortMode),
-  };
-}
-
-function getVisibleAssets() {
-  const visibleAssets = showProblemOnly ? assets.filter((asset) => asset.dimensionIssue) : [...assets];
+function getVisibleAssets(duplicateContext = buildDuplicateStatusContext()) {
+  const visibleAssets = showProblemOnly ? assets.filter((asset) => isNamingAssetProblem(asset, duplicateContext)) : [...assets];
   if (listSortMode === "upload") return visibleAssets;
   return [...visibleAssets].sort((left, right) => {
     const leftName = (left.originalBase + left.extension).trim();
@@ -357,6 +733,54 @@ function getVisibleAssets() {
     const result = leftName.localeCompare(rightName, "zh-Hans-CN", { numeric: true, sensitivity: "base" });
     return listSortMode === "name-desc" ? -result : result;
   });
+}
+
+function isNamingAssetProblem(asset, duplicateContext = buildDuplicateStatusContext()) {
+  return Boolean(asset.dimensionIssue || getDuplicateStatus(asset, duplicateContext).hasIssue);
+}
+
+function applyNamingStatusBadge(badge, asset, duplicateStatus = getDuplicateStatus(asset)) {
+  const hasDuplicate = duplicateStatus.kind === "batch";
+  badge.className = `${badge.classList.contains("album-card-status") ? "status-badge album-card-status" : "status-badge"} status-${hasDuplicate ? "duplicate" : getAssetStatus(asset)}`;
+  badge.textContent = hasDuplicate ? "重复命名" : getAssetStatusText(asset);
+  badge.title = hasDuplicate ? duplicateStatus.message : "";
+}
+
+function syncDuplicateNameIndicators() {
+  const duplicateContext = buildDuplicateStatusContext();
+  const problemCount = assets.filter((asset) => isNamingAssetProblem(asset, duplicateContext)).length;
+  const duplicateCount = assets.filter((asset) => getDuplicateStatus(asset, duplicateContext).kind === "batch").length;
+  els.fileCount.textContent = assets.length + " 张" + (problemCount ? " / " + problemCount + " 张问题" : "") + (duplicateCount ? " / " + duplicateCount + " 张重名" : "");
+  els.assetList.querySelectorAll("[data-asset-id]").forEach((node) => {
+    const asset = assets.find((item) => String(item.id) === node.dataset.assetId);
+    if (!asset) return;
+    const duplicateStatus = getDuplicateStatus(asset, duplicateContext);
+    node.classList.toggle("has-duplicate", duplicateStatus.hasIssue && !asset.dimensionIssue);
+    const duplicateLine = node.querySelector(".duplicate-check-line");
+    if (duplicateLine) {
+      duplicateLine.querySelector("strong").textContent = duplicateStatus.message;
+      duplicateLine.classList.toggle("warning-line", duplicateStatus.hasIssue);
+    }
+    const hint = node.querySelector(".album-duplicate-hint");
+    if (hint) {
+      hint.textContent = duplicateStatus.hasIssue ? duplicateStatus.message : "";
+      hint.hidden = !duplicateStatus.hasIssue;
+    }
+    const badge = node.querySelector(".status-badge");
+    if (badge) applyNamingStatusBadge(badge, asset, duplicateStatus);
+  });
+  const editorAsset = assets.find((item) => String(item.id) === els.albumEditorPanel?.dataset.assetId);
+  if (editorAsset) {
+    const editorStatus = getDuplicateStatus(editorAsset, duplicateContext);
+    const editorBadge = els.albumEditorPanel.querySelector(".status-badge");
+    if (editorBadge) applyNamingStatusBadge(editorBadge, editorAsset, editorStatus);
+    const editorHint = els.albumEditorPanel.querySelector(".album-editor-duplicate-hint");
+    if (editorHint) {
+      editorHint.textContent = editorStatus.hasIssue ? editorStatus.message : "";
+      editorHint.hidden = !editorStatus.hasIssue;
+    }
+  }
+  renderNamingSessionList();
 }
 
 function renderDetectionList() {

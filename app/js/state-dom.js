@@ -1,4 +1,4 @@
-/* NGR AssetPilot V2.23 module: state-dom.js */
+/* NGR AssetPilot V2.25 module: state-dom.js */
 let projects;
 let activeProjectId;
 let schemes;
@@ -13,6 +13,7 @@ let activeDetectionProfileId;
 let detectionAssets;
 let selectedId;
 let referenceFile;
+let referencePreviewUrl;
 let namingController;
 let stopRequested;
 let showProblemOnly;
@@ -22,6 +23,9 @@ let toastTimer;
 let activeLexiconCategory;
 let listDisplayMode;
 let listSortMode;
+let albumSettings;
+let albumPage;
+let albumEditorOpen;
 let knowledgeCacheKey;
 let knowledgeCacheValue;
 let assetRenderLimit;
@@ -31,6 +35,7 @@ let tutorialSlideIndex;
 let baiduTextCache;
 let meaningCache;
 let pendingMeaningNames;
+let translatorDragState;
 
 function bootstrapState() {
   projects = loadProjects();
@@ -47,6 +52,7 @@ function bootstrapState() {
   detectionAssets = [];
   selectedId = null;
   referenceFile = null;
+  referencePreviewUrl = "";
   namingController = null;
   stopRequested = false;
   showProblemOnly = false;
@@ -56,6 +62,9 @@ function bootstrapState() {
   activeLexiconCategory = "状态";
   listDisplayMode = loadListDisplayMode();
   listSortMode = loadListSortMode();
+  albumSettings = normalizeAlbumSettings();
+  albumPage = 1;
+  albumEditorOpen = false;
   knowledgeCacheKey = "";
   knowledgeCacheValue = null;
   assetRenderLimit = ASSET_RENDER_BATCH_SIZE;
@@ -65,6 +74,7 @@ function bootstrapState() {
   baiduTextCache = new Map();
   meaningCache = loadMeaningCache();
   pendingMeaningNames = new Set();
+  translatorDragState = null;
 }
 
 const els = {
@@ -127,6 +137,7 @@ const els = {
   resetRules: document.querySelector("#resetRules"),
   activeRuleText: document.querySelector("#activeRuleText"),
   uploadDropZone: document.querySelector("#uploadDropZone"),
+  uploadSourceMenu: document.querySelector("#uploadSourceMenu"),
   folderInput: document.querySelector("#folderInput"),
   singleInput: document.querySelector("#singleInput"),
   referenceInput: document.querySelector("#referenceInput"),
@@ -135,6 +146,8 @@ const els = {
   referenceName: document.querySelector("#referenceName"),
   namingSessionList: document.querySelector("#namingSessionList"),
   newNamingSession: document.querySelector("#newNamingSession"),
+  saveNamingWorkspace: document.querySelector("#saveNamingWorkspace"),
+  namingSaveStatus: document.querySelector("#namingSaveStatus"),
   selectVisibleAssets: document.querySelector("#selectVisibleAssets"),
   selectedAssetCount: document.querySelector("#selectedAssetCount"),
   assetList: document.querySelector("#assetList"),
@@ -142,12 +155,22 @@ const els = {
   namingModeSelect: document.querySelector("#namingModeSelect"),
   runSelectedNaming: document.querySelector("#runSelectedNaming"),
   stopNaming: document.querySelector("#stopNaming"),
+  exportModeSelect: document.querySelector("#exportModeSelect"),
   exportFiles: document.querySelector("#exportFiles"),
+  exportMenu: document.querySelector("#exportMenu"),
   batchOperationMode: document.querySelector("#batchOperationMode"),
   batchSuffix: document.querySelector("#batchSuffix"),
   batchSequenceStart: document.querySelector("#batchSequenceStart"),
   applyBatchOperation: document.querySelector("#applyBatchOperation"),
-  listViewSortMode: document.querySelector("#listViewSortMode"),
+  listDisplayModeSelect: document.querySelector("#listDisplayModeSelect"),
+  listSortModeSelect: document.querySelector("#listSortModeSelect"),
+  albumGridSettings: document.querySelector("#albumGridSettings"),
+  albumColumns: document.querySelector("#albumColumns"),
+  albumRows: document.querySelector("#albumRows"),
+  albumColumnGap: document.querySelector("#albumColumnGap"),
+  albumRowGap: document.querySelector("#albumRowGap"),
+  workspace: document.querySelector("#workspace"),
+  albumEditorPanel: document.querySelector("#albumEditorPanel"),
   problemFilter: document.querySelector("#problemFilter"),
   removeSelected: document.querySelector("#removeSelected"),
   detectionProfileSelect: document.querySelector("#detectionProfileSelect"),
@@ -180,6 +203,7 @@ const els = {
   detectionList: document.querySelector("#detectionList"),
   translatorPanel: document.querySelector("#translatorPanel"),
   translatorToggle: document.querySelector("#translatorToggle"),
+  translatorDragHandle: document.querySelector("#translatorDragHandle"),
   translatorClose: document.querySelector("#translatorClose"),
   translatorSettingsToggle: document.querySelector("#translatorSettingsToggle"),
   translatorSettings: document.querySelector("#translatorSettings"),

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NGR AssetPilot｜AI资源领航</title>
-    <link rel="stylesheet" href="styles.css?v=V2.23" />
+    <link rel="stylesheet" href="styles.css?v=V2.26" />
   </head>
   <body>
     <div id="app">
@@ -15,7 +15,7 @@
             <span class="brand-logo-core"></span>
           </div>
           <div class="topbar-title">
-            <h1><span class="brand-en">NGR AssetPilot</span><span class="brand-divider">｜</span><span class="brand-cn">AI资源领航</span> <span class="version-badge">V2.23</span></h1>
+            <h1><span class="brand-en">NGR AssetPilot</span><span class="brand-divider">｜</span><span class="brand-cn">AI资源领航</span> <span class="version-badge">V2.26</span></h1>
             <p id="pageHint">批量整理 UI 切图名称，让文件名保持统一、清楚、可追踪。</p>
           </div>
         </div>
@@ -44,7 +44,7 @@
 
         <section class="view rules-view" id="rulesView">
           <div class="section-head">
-            <h2>命名规则 <span class="version-badge">V2.23</span><time class="version-date" datetime="2026-06-29">更新于 2026-06-29</time></h2>
+            <h2>命名规则 <span class="version-badge">V2.26</span><time class="version-date" datetime="2026-08-13">更新于 2026-08-13</time></h2>
             <p>这些设置会自动保存，并在命名流程中作为全局前缀使用。</p>
           </div>
 
@@ -265,21 +265,56 @@
               </label>
               <button id="runSelectedNaming" class="primary-action" type="button">运行百度翻译API命名</button>
               <button id="stopNaming" class="danger-action hidden" type="button">终止命名</button>
-              <button id="exportFiles" class="success-action" type="button">下载全部命名完成图片</button>
+              <details id="exportMenu" class="compact-action-menu export-action-menu">
+                <summary class="toolbar-icon-action" aria-label="打开导出菜单" title="导出命名图片">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 3v11m0 0 4-4m-4 4-4-4M5 15v4h14v-4" />
+                  </svg>
+                  <span class="sr-only">导出命名图片</span>
+                </summary>
+                <div class="compact-menu-panel export-menu-panel">
+                  <strong>导出命名图片</strong>
+                  <label>
+                    <span>导出方式</span>
+                    <select id="exportModeSelect">
+                      <option value="folder" selected>工程文件夹</option>
+                      <option value="zip">ZIP 压缩包</option>
+                    </select>
+                  </label>
+                  <button id="exportFiles" class="success-action" type="button">立即导出</button>
+                </div>
+              </details>
             </div>
           </div>
 
           <div class="upload-grid" id="uploadDropZone">
-            <label class="upload-panel">
-              <span>上传切图文件夹</span>
-              <small>支持 PNG、JPG、JPEG、WebP、GIF、SVG，可拖入文件夹</small>
-              <input id="folderInput" type="file" webkitdirectory multiple accept="image/*,.svg" />
-            </label>
-            <label class="upload-panel">
-              <span>补充上传单张图片</span>
-              <small>支持 PNG、JPG、JPEG、WebP、GIF、SVG</small>
-              <input id="singleInput" type="file" multiple accept="image/*,.svg" />
-            </label>
+            <section class="upload-panel upload-combined-panel">
+              <div class="upload-combined-copy">
+                <span>上传切图</span>
+                <small>文件夹、单张或多张图片，也可直接拖入</small>
+              </div>
+              <details id="uploadSourceMenu" class="compact-action-menu upload-source-menu">
+                <summary class="upload-combined-trigger">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 16V5m0 0-4 4m4-4 4 4M5 15v4h14v-4" />
+                  </svg>
+                  <span>上传切图</span>
+                  <svg class="menu-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" /></svg>
+                </summary>
+                <div class="compact-menu-panel upload-source-panel">
+                  <label class="upload-source-option">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h7l2 2h9v10H3zM3 7V5h7l2 2" /></svg>
+                    <span><strong>选择文件夹</strong><small>整套切图一次导入</small></span>
+                    <input id="folderInput" class="menu-file-input" type="file" webkitdirectory multiple accept="image/*,.svg" />
+                  </label>
+                  <label class="upload-source-option">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM7 15l3-3 2 2 2-2 3 3M8 9h.01" /></svg>
+                    <span><strong>选择图片</strong><small>可选单张或多张</small></span>
+                    <input id="singleInput" class="menu-file-input" type="file" multiple accept="image/*,.svg" />
+                  </label>
+                </div>
+              </details>
+            </section>
             <label class="upload-panel reference">
               <span>上传参考效果图</span>
               <small>支持 PNG、JPG、JPEG、WebP、GIF</small>
@@ -331,14 +366,19 @@
               </div>
             </div>
             <label>
-              <span>列表展示/排序</span>
-              <select id="listViewSortMode">
-                <option value="full:name-asc" selected>完整模式 · 原文件名 A-Z</option>
-                <option value="full:upload">完整模式 · 上传顺序</option>
-                <option value="full:name-desc">完整模式 · 原文件名 Z-A</option>
-                <option value="compact:name-asc">紧凑模式 · 原文件名 A-Z</option>
-                <option value="compact:upload">紧凑模式 · 上传顺序</option>
-                <option value="compact:name-desc">紧凑模式 · 原文件名 Z-A</option>
+              <span>展示模式</span>
+              <select id="listDisplayModeSelect">
+                <option value="full" selected>完整列表</option>
+                <option value="compact">紧凑列表</option>
+                <option value="album">画册模式</option>
+              </select>
+            </label>
+            <label>
+              <span>排序方式</span>
+              <select id="listSortModeSelect">
+                <option value="name-asc" selected>原文件名 A-Z</option>
+                <option value="upload">上传顺序</option>
+                <option value="name-desc">原文件名 Z-A</option>
               </select>
             </label>
             <div class="batch-actions-line">
@@ -347,12 +387,25 @@
             </div>
           </div>
 
-          <div class="workspace">
+          <div id="albumGridSettings" class="album-grid-settings hidden" aria-label="画册 Grid 参数">
+            <strong>画册 Grid</strong>
+            <label><span>列数</span><input id="albumColumns" type="number" min="1" max="12" step="1" value="4" /></label>
+            <label><span>每页行数</span><input id="albumRows" type="number" min="1" max="20" step="1" value="6" /></label>
+            <label><span>横向 Gap</span><input id="albumColumnGap" type="number" min="0" max="200" step="1" value="112" /></label>
+            <label><span>纵向 Gap</span><input id="albumRowGap" type="number" min="0" max="200" step="1" value="46" /></label>
+            <span class="album-grid-summary">默认 4 × 6，单页 24 张</span>
+          </div>
+
+          <div class="workspace" id="workspace">
             <aside class="asset-list">
               <div class="naming-history-bar">
                 <div class="history-head">
                   <strong>命名记录</strong>
-                  <button id="newNamingSession" class="ghost-action" type="button">新建</button>
+                  <div class="history-actions">
+                    <button id="newNamingSession" class="ghost-action" type="button">新建</button>
+                    <button id="saveNamingWorkspace" class="primary-action" type="button">保存当前进度</button>
+                  </div>
+                  <span id="namingSaveStatus" class="naming-save-status" role="status">尚未保存</span>
                 </div>
                 <div id="namingSessionList" class="naming-session-list"></div>
               </div>
@@ -371,6 +424,7 @@
               </div>
               <div id="assetList" class="asset-list-body empty-state">请先上传切图文件夹</div>
             </aside>
+            <aside id="albumEditorPanel" class="album-editor-panel hidden" aria-label="画册图片命名编辑"></aside>
           </div>
           <div class="signature page-signature">
             <span>by五成（月财）</span>
@@ -529,13 +583,16 @@
         </section>
       </main>
 
-      <aside class="translator-panel collapsed" id="translatorPanel">
-        <button class="translator-toggle" id="translatorToggle" type="button">翻译</button>
+      <aside class="translator-panel collapsed" id="translatorPanel" role="dialog" aria-labelledby="translatorTitle">
+        <button class="translator-toggle" id="translatorToggle" type="button" aria-controls="translatorPanel" aria-expanded="false">翻译</button>
         <div class="translator-body">
           <div class="translator-head">
-            <strong>命名单词翻译</strong>
+            <div class="translator-drag-handle" id="translatorDragHandle" role="button" tabindex="0" aria-label="拖动翻译窗口，可使用方向键移动" title="按住拖动窗口">
+              <span class="translator-drag-grip" aria-hidden="true"></span>
+              <strong id="translatorTitle">命名单词翻译</strong>
+            </div>
             <div class="translator-head-actions">
-              <button id="translatorSettingsToggle" type="button" aria-label="翻译 API 设置" title="翻译 API 设置">⚙</button>
+              <button id="translatorSettingsToggle" type="button" aria-label="翻译 API 设置" aria-controls="translatorSettings" aria-expanded="false" title="翻译 API 设置">⚙</button>
               <button id="translatorClose" type="button" aria-label="收起翻译面板">×</button>
             </div>
           </div>
@@ -579,13 +636,14 @@
             </div>
             <small>翻译配置只处理文本文件名，不会上传图片。若接口失败，会自动使用本地词库和拼音兜底。</small>
           </div>
-          <textarea id="translatorInput" rows="4" placeholder="输入中文文件名、英文命名或单词"></textarea>
+          <label class="sr-only" for="translatorInput">需要翻译或解释的命名单词</label>
+          <input class="translator-input" id="translatorInput" type="text" placeholder="输入中文文件名、英文命名或单词" autocomplete="off" spellcheck="false" />
           <div class="translator-actions">
             <button id="translatorToName" class="primary-action" type="button">生成命名词</button>
             <button id="translatorApplyName" class="primary-action" type="button">填入最终名称</button>
             <button id="translatorExplain" class="ghost-action" type="button">解释英文</button>
           </div>
-          <div class="translator-output" id="translatorOutput">展开后可快速翻译中文文件名或解释英文命名。</div>
+          <div class="translator-output" id="translatorOutput" role="status" aria-live="polite">展开后可快速翻译中文文件名或解释英文命名。</div>
         </div>
       </aside>
 
@@ -625,18 +683,20 @@
       <div id="toast" class="toast hidden" role="status"></div>
     </div>
 
-    <script src="API配置文件/local-config.js?v=V2.23"></script>
-    <script src="historical-knowledge.js?v=V2.23"></script>
-    <script src="js/config.js?v=V2.23"></script>
-    <script src="js/state-dom.js?v=V2.23"></script>
-    <script src="js/lifecycle-rules.js?v=V2.23"></script>
-    <script src="js/uploads-editor-translator.js?v=V2.23"></script>
-    <script src="js/ai-workflow.js?v=V2.23"></script>
-    <script src="js/assets-detection.js?v=V2.23"></script>
-    <script src="js/rendering.js?v=V2.23"></script>
-    <script src="js/naming-knowledge.js?v=V2.23"></script>
-    <script src="js/export-template-storage.js?v=V2.23"></script>
-    <script src="js/toast.js?v=V2.23"></script>
-    <script src="js/main.js?v=V2.23"></script>
+    <script src="vendor/fflate-0.8.3.min.js?v=V2.26"></script>
+    <script src="API配置文件/local-config.js?v=V2.26"></script>
+    <script src="historical-knowledge.js?v=V2.26"></script>
+    <script src="js/config.js?v=V2.26"></script>
+    <script src="js/state-dom.js?v=V2.26"></script>
+    <script src="js/lifecycle-rules.js?v=V2.26"></script>
+    <script src="js/uploads-editor-translator.js?v=V2.26"></script>
+    <script src="js/ai-workflow.js?v=V2.26"></script>
+    <script src="js/assets-detection.js?v=V2.26"></script>
+    <script src="js/rendering.js?v=V2.26"></script>
+    <script src="js/naming-knowledge.js?v=V2.26"></script>
+    <script src="js/export-template-storage.js?v=V2.26"></script>
+    <script src="js/toast.js?v=V2.26"></script>
+    <script src="js/workspace-storage.js?v=V2.26"></script>
+    <script src="js/main.js?v=V2.26"></script>
   </body>
 </html>

@@ -1,4 +1,4 @@
-/* NGR AssetPilot V2.23 module: naming-knowledge.js */
+/* NGR AssetPilot V2.26 module: naming-knowledge.js */
 let meaningQueue = [];
 let meaningQueueActive = 0;
 
@@ -101,15 +101,26 @@ function getHistoricalModuleMatch() {
 }
 
 function getDuplicateStatus(asset, context = buildDuplicateStatusContext()) {
-  if (!asset.finalBaseName) return { hasIssue: false, message: "待命名" };
-  const exportName = buildExportName(asset).toLowerCase();
-  const batchCount = context.counts?.get(exportName) || 0;
-  if (batchCount > 1) return { hasIssue: true, message: "当前批次重名" };
+  if (!asset.finalBaseName) return { hasIssue: false, kind: "none", message: "待命名" };
+  const exportName = buildExportName(asset).toLocaleLowerCase("en-US");
+  const duplicateGroup = context.groups?.get(buildExportPathKey(asset)) || [];
+  if (duplicateGroup.length > 1) {
+    const otherAsset = duplicateGroup.find((item) => item.id !== asset.id) || duplicateGroup[0];
+    const otherName = otherAsset ? otherAsset.originalBase + otherAsset.extension : "另一张图片";
+    return {
+      hasIssue: true,
+      kind: "batch",
+      count: duplicateGroup.length,
+      message: `重复命名：与「${otherName}」等共 ${duplicateGroup.length} 张同名`,
+    };
+  }
   const historicalMatch = context.historicalMatch;
   if (context.historicalNames?.has(exportName)) {
-    return { hasIssue: true, message: "历史重名：" + historicalMatch.name };
+    return { hasIssue: true, kind: "history", message: "历史重名：" + historicalMatch.name };
   }
-  return historicalMatch ? { hasIssue: false, message: "未重名 / 已匹配 " + historicalMatch.name } : { hasIssue: false, message: "未匹配历史工程" };
+  return historicalMatch
+    ? { hasIssue: false, kind: "none", message: "未重名 / 已匹配 " + historicalMatch.name }
+    : { hasIssue: false, kind: "none", message: "未匹配历史工程" };
 }
 
 function inferKind(asset, source, tags, componentTerms = []) {

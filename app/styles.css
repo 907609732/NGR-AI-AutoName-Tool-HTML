@@ -578,6 +578,10 @@ button:disabled {
   grid-template-columns: auto minmax(160px, 190px);
 }
 
+.export-mode-field {
+  grid-template-columns: auto minmax(116px, 144px);
+}
+
 .primary-action,
 .success-action,
 .ghost-action,
@@ -767,6 +771,12 @@ button:disabled {
   background: #fffaf0;
 }
 
+.asset-item.has-duplicate {
+  border-color: #e9958a;
+  background: #fff1ef;
+  box-shadow: inset 4px 0 0 #d65345;
+}
+
 .asset-item.has-issue:hover,
 .asset-item.has-issue.active {
   border-color: #e9958a;
@@ -777,6 +787,12 @@ button:disabled {
 .asset-item.has-warning.active {
   border-color: #d6ad45;
   background: #fff4d6;
+}
+
+.asset-item.has-duplicate:hover,
+.asset-item.has-duplicate.active {
+  border-color: #d65345;
+  background: #ffe8e5;
 }
 
 .asset-item input {
@@ -1715,12 +1731,11 @@ button:disabled {
 
 .translator-panel {
   position: fixed;
-  right: 14px;
-  top: 50%;
+  right: 18px;
+  top: 88px;
   bottom: auto;
-  transform: translateY(-50%);
-  z-index: 30;
-  width: min(380px, calc(100vw - 36px));
+  z-index: 40;
+  width: min(304px, calc(100vw - 20px));
 }
 
 .translator-toggle {
@@ -1741,17 +1756,28 @@ button:disabled {
 
 .translator-body {
   display: grid;
-  gap: 10px;
-  padding: 12px;
+  gap: 8px;
+  max-height: calc(100vh - 16px);
+  max-height: calc(100dvh - 16px);
+  padding: 10px;
+  overflow-y: auto;
+  scrollbar-width: thin;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--surface);
   box-shadow: 0 18px 42px rgba(27, 36, 40, 0.14);
 }
 
+.translator-panel.dragging .translator-body {
+  box-shadow: 0 22px 52px rgba(23, 126, 137, 0.24);
+}
+
 .translator-panel.collapsed {
   width: auto;
-  right: 0;
+  left: auto !important;
+  right: 0 !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
 }
 
 .translator-panel.collapsed .translator-toggle {
@@ -1767,7 +1793,45 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
+}
+
+.translator-drag-handle {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 2px;
+  border-radius: 7px;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.translator-drag-handle:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.translator-panel.dragging .translator-drag-handle {
+  cursor: grabbing;
+}
+
+.translator-drag-grip {
+  width: 12px;
+  height: 16px;
+  flex: 0 0 12px;
+  opacity: 0.6;
+  background-image: radial-gradient(circle, currentColor 1.25px, transparent 1.5px);
+  background-size: 6px 6px;
+  color: var(--muted);
+}
+
+.translator-drag-handle strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .translator-head-actions {
@@ -1786,8 +1850,8 @@ button:disabled {
 .translator-settings {
   order: 5;
   display: grid;
-  gap: 8px;
-  padding: 10px;
+  gap: 7px;
+  padding: 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #f8fbfc;
@@ -1803,7 +1867,7 @@ button:disabled {
 
 .translator-settings input,
 .translator-settings select {
-  height: 36px;
+  height: 34px;
 }
 
 .translator-settings-actions {
@@ -1835,35 +1899,39 @@ button:disabled {
   line-height: 1.5;
 }
 
-.translator-body textarea {
+.translator-input {
   order: 2;
-  min-height: 92px;
-  resize: vertical;
+  width: 100%;
+  height: 38px;
+  min-height: 38px;
 }
 
 .translator-actions {
   order: 3;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
 }
 
 .translator-actions button {
-  min-height: 38px;
-  padding: 0 10px;
-  font-size: 13px;
+  min-height: 34px;
+  padding: 0 6px;
+  font-size: 12px;
 }
 
 .translator-output {
   order: 4;
-  min-height: 44px;
-  padding: 10px;
+  min-height: 36px;
+  max-height: 88px;
+  padding: 8px;
+  overflow-y: auto;
   border-radius: 8px;
   background: var(--surface-2);
   color: var(--text);
-  font-size: 13px;
-  line-height: 1.55;
+  font-size: 12px;
+  line-height: 1.5;
   overflow-wrap: anywhere;
+  white-space: pre-line;
 }
 
 .guide-overlay {
@@ -2007,15 +2075,13 @@ button:disabled {
 
   .translator-panel {
     right: 8px;
-    width: min(340px, calc(100vw - 18px));
+    width: min(304px, calc(100vw - 16px));
   }
 
   .translator-panel.collapsed {
     right: 0;
   }
 
-  .translator-actions,
-  .translator-settings-actions,
   .guide-actions {
     grid-template-columns: 1fr;
   }
@@ -2073,5 +2139,659 @@ button:disabled {
 @media (max-width: 1500px) {
   .naming-batch-tools {
     grid-template-columns: minmax(90px, 0.45fr) minmax(150px, 0.9fr) minmax(130px, 0.75fr) minmax(330px, 1.15fr) minmax(180px, 0.85fr) minmax(130px, 0.65fr) minmax(130px, 0.65fr);
+  }
+}
+
+/* V2.26 命名进度、画册与重复命名提示 */
+.history-actions {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+}
+
+.history-actions .primary-action,
+.history-actions .ghost-action {
+  min-height: 34px;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
+.naming-save-status {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.naming-save-status.is-saving,
+.naming-save-status.is-pending {
+  color: #8a6110;
+}
+
+.naming-save-status.is-saved {
+  color: #28734c;
+}
+
+.naming-save-status.is-error {
+  color: var(--danger);
+}
+
+.album-grid-settings {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: -4px 0 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #fbfefe, #f5fafb);
+}
+
+.album-grid-settings > strong {
+  align-self: center;
+  margin-right: 4px;
+}
+
+.album-grid-settings label {
+  display: grid;
+  gap: 5px;
+  width: 112px;
+}
+
+.album-grid-settings label span,
+.album-grid-summary {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.album-grid-settings input {
+  height: 36px;
+}
+
+.album-grid-summary {
+  align-self: center;
+  margin-left: auto;
+}
+
+.workspace.album-mode.album-editor-open {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 390px);
+  gap: 14px;
+  align-items: start;
+}
+
+.workspace.album-mode .asset-list {
+  min-width: 0;
+}
+
+.album-grid-mode {
+  display: grid;
+  grid-template-columns: repeat(var(--album-columns, 4), minmax(0, 1fr));
+  column-gap: var(--album-column-gap, 112px);
+  row-gap: var(--album-row-gap, 46px);
+  align-items: start;
+  padding: 18px;
+  overflow: visible;
+}
+
+.album-card {
+  position: relative;
+  display: grid;
+  grid-template-rows: minmax(160px, 1fr) auto;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(31, 48, 54, 0.06);
+  cursor: pointer;
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.album-card:hover,
+.album-card.active {
+  border-color: rgba(23, 126, 137, 0.65);
+  box-shadow: 0 10px 28px rgba(23, 126, 137, 0.13);
+  transform: translateY(-2px);
+}
+
+.album-card.has-issue {
+  border-color: #e9958a;
+}
+
+.album-card.has-warning {
+  border-color: #d6ad45;
+}
+
+.album-card.has-duplicate {
+  border-color: #d65345;
+  background: #fff5f3;
+  box-shadow: inset 0 0 0 2px rgba(214, 83, 69, 0.2);
+}
+
+.album-duplicate-hint {
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.status-duplicate {
+  color: #a42f26;
+  background: #ffe0dc;
+}
+
+.album-card-check {
+  position: absolute;
+  z-index: 2;
+  top: 9px;
+  left: 9px;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--primary);
+}
+
+.album-card-media {
+  display: grid;
+  place-items: center;
+  min-height: 160px;
+  padding: 16px;
+  background:
+    linear-gradient(45deg, rgba(225, 231, 233, 0.56) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(225, 231, 233, 0.56) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(225, 231, 233, 0.56) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(225, 231, 233, 0.56) 75%);
+  background-color: #f8fafb;
+  background-size: 18px 18px;
+  background-position: 0 0, 0 9px, 9px -9px, -9px 0;
+}
+
+.album-card-media img {
+  display: block;
+  width: 100%;
+  height: 210px;
+  object-fit: contain;
+}
+
+.album-card-body {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--line);
+}
+
+.album-original-name,
+.album-export-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.album-original-name {
+  font-size: 13px;
+}
+
+.album-export-name {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.album-card-status {
+  margin-top: 2px !important;
+}
+
+.album-pager {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.album-pager .ghost-action {
+  min-height: 36px;
+}
+
+.album-editor-panel {
+  position: sticky;
+  top: 12px;
+  display: grid;
+  gap: 14px;
+  max-height: calc(100vh - 24px);
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 16px 42px rgba(27, 44, 50, 0.13);
+}
+
+.album-editor-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.album-editor-head > div {
+  min-width: 0;
+}
+
+.album-editor-head span,
+.album-editor-head strong {
+  display: block;
+}
+
+.album-editor-head span {
+  margin-bottom: 4px;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.album-editor-head strong {
+  overflow-wrap: anywhere;
+}
+
+.album-editor-preview {
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.album-editor-preview img {
+  width: 116px;
+  height: 116px;
+  object-fit: contain;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.album-editor-info {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.album-editor-info strong {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.album-editor-info > span:not(.status-badge) {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.album-naming-editor,
+.album-editor-fields,
+.album-editor-recommendations {
+  display: grid;
+  gap: 10px;
+}
+
+.album-editor-fields label {
+  display: grid;
+  gap: 5px;
+}
+
+.album-editor-fields label > span,
+.album-editor-recommendations > strong {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.album-editor-fields input,
+.album-editor-fields select {
+  height: 38px;
+}
+
+.album-final-field .name-meaning {
+  margin-top: 0;
+}
+
+.album-editor-recommendations .recommendations {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.album-editor-lexicon .lexicon-content {
+  max-height: 240px;
+  overflow: auto;
+}
+
+@media (max-width: 1200px) {
+  .album-grid-mode {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    column-gap: min(var(--album-column-gap, 112px), 40px);
+  }
+}
+
+@media (max-width: 900px) {
+  .naming-batch-tools {
+    grid-template-columns: 1fr;
+  }
+
+  .naming-batch-tools .batch-actions-line {
+    grid-column: 1;
+  }
+
+  .workspace.album-mode.album-editor-open {
+    display: block;
+  }
+
+  .album-grid-mode {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: min(var(--album-column-gap, 112px), 18px);
+    row-gap: min(var(--album-row-gap, 46px), 18px);
+  }
+
+  .album-editor-panel {
+    position: fixed;
+    z-index: 55;
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    max-height: min(78vh, 680px);
+    border-radius: 16px 16px 0 0;
+    padding: 16px 18px max(18px, env(safe-area-inset-bottom));
+    box-shadow: 0 -18px 50px rgba(18, 31, 36, 0.24);
+  }
+
+  .album-editor-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .album-final-field {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 560px) {
+  .album-grid-mode {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 12px;
+  }
+
+  .album-card-media img {
+    height: 230px;
+  }
+
+  .album-editor-fields,
+  .album-editor-preview {
+    grid-template-columns: 1fr;
+  }
+
+  .album-editor-preview img {
+    width: 100%;
+    height: 180px;
+  }
+}
+
+/* V2.25 紧凑导出菜单与合并上传入口 */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.compact-action-menu {
+  position: relative;
+  z-index: 24;
+}
+
+.compact-action-menu > summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+.compact-action-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.toolbar-icon-action {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid #2b8b60;
+  border-radius: 8px;
+  background: var(--success);
+  color: #fff;
+  transition: background 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.toolbar-icon-action:hover,
+.compact-action-menu[open] > .toolbar-icon-action {
+  background: #24764f;
+  box-shadow: 0 8px 20px rgba(43, 139, 96, 0.2);
+}
+
+.toolbar-icon-action:active {
+  transform: translateY(1px);
+}
+
+.toolbar-icon-action:focus-visible,
+.upload-combined-trigger:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.toolbar-icon-action svg,
+.upload-combined-trigger > svg:first-child,
+.upload-source-option > svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.compact-menu-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 45;
+  display: grid;
+  gap: 10px;
+  width: 272px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 18px 44px rgba(24, 40, 46, 0.18);
+}
+
+.export-menu-panel > strong {
+  font-size: 14px;
+}
+
+.export-menu-panel label {
+  display: grid;
+  gap: 6px;
+}
+
+.export-menu-panel label span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.export-menu-panel select,
+.export-menu-panel .success-action {
+  width: 100%;
+}
+
+#uploadDropZone {
+  grid-template-columns: minmax(280px, 1.25fr) minmax(220px, 1fr) minmax(220px, 1fr);
+}
+
+.upload-combined-panel {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  cursor: default;
+}
+
+.upload-combined-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.upload-combined-copy > span,
+.upload-combined-copy > small {
+  display: block;
+}
+
+.upload-source-menu {
+  justify-self: end;
+}
+
+.upload-combined-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 132px;
+  min-height: 38px;
+  padding: 0 11px;
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  background: #edf9f9;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.upload-source-menu[open] > .upload-combined-trigger,
+.upload-combined-trigger:hover {
+  background: #ddf3f3;
+}
+
+.menu-chevron {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  transition: transform 140ms ease;
+}
+
+.upload-source-menu[open] .menu-chevron {
+  transform: rotate(180deg);
+}
+
+.upload-source-panel {
+  width: 310px;
+  gap: 6px;
+}
+
+.upload-source-option {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+  min-height: 58px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.upload-source-option:hover {
+  border-color: rgba(23, 126, 137, 0.32);
+  background: #f1f9f9;
+}
+
+.upload-source-option > svg {
+  justify-self: center;
+  color: var(--primary);
+}
+
+.upload-source-option > span,
+.upload-source-option strong,
+.upload-source-option small {
+  display: block;
+}
+
+.upload-source-option strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.upload-source-option small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.upload-panel .menu-file-input {
+  display: none;
+}
+
+@media (max-width: 980px) {
+  #uploadDropZone {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .upload-combined-panel {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 860px) {
+  #uploadDropZone {
+    grid-template-columns: 1fr;
+  }
+
+  .upload-combined-panel {
+    grid-column: 1;
+  }
+}
+
+@media (max-width: 520px) {
+  .upload-combined-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .upload-source-menu,
+  .upload-combined-trigger {
+    width: 100%;
+  }
+
+  .upload-source-panel,
+  .export-menu-panel {
+    right: auto;
+    left: 0;
+    width: min(310px, calc(100vw - 40px));
   }
 }

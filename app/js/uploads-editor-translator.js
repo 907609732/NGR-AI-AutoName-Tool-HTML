@@ -1,7 +1,16 @@
-/* NGR AssetPilot V2.23 module: uploads-editor-translator.js */
+/* NGR AssetPilot V2.25 module: uploads-editor-translator.js */
 function bindUploads() {
-  els.folderInput.addEventListener("change", (event) => addFiles([...event.target.files]));
-  els.singleInput.addEventListener("change", (event) => addFiles([...event.target.files]));
+  bindCompactActionMenus();
+  els.folderInput.addEventListener("change", async (event) => {
+    closeCompactActionMenu(els.uploadSourceMenu);
+    await addFiles([...event.target.files]);
+    event.target.value = "";
+  });
+  els.singleInput.addEventListener("change", async (event) => {
+    closeCompactActionMenu(els.uploadSourceMenu);
+    await addFiles([...event.target.files]);
+    event.target.value = "";
+  });
   ["dragenter", "dragover"].forEach((eventName) => {
     els.uploadDropZone.addEventListener(eventName, (event) => {
       event.preventDefault();
@@ -24,11 +33,53 @@ function bindUploads() {
     const file = event.target.files[0];
     if (!file) return;
     referenceFile = file;
-    els.referencePreview.src = URL.createObjectURL(file);
-    els.referenceName.textContent = file.name;
-    els.referencePreviewWrap.classList.remove("hidden");
+    syncReferencePreview();
+    saveCurrentNamingSession();
+    markCurrentReferenceFileDirty();
     showToast("参考效果图已载入");
   });
+}
+
+function bindCompactActionMenus() {
+  const menus = [els.uploadSourceMenu, els.exportMenu].filter(Boolean);
+  menus.forEach((menu) => {
+    menu.addEventListener("toggle", () => {
+      if (!menu.open) return;
+      menus.forEach((otherMenu) => {
+        if (otherMenu !== menu) otherMenu.removeAttribute("open");
+      });
+    });
+  });
+  document.addEventListener("click", (event) => {
+    menus.forEach((menu) => {
+      if (menu.open && !menu.contains(event.target)) menu.removeAttribute("open");
+    });
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    menus.forEach(closeCompactActionMenu);
+  });
+}
+
+function closeCompactActionMenu(menu) {
+  menu?.removeAttribute("open");
+}
+
+function syncReferencePreview() {
+  if (referencePreviewUrl) {
+    URL.revokeObjectURL(referencePreviewUrl);
+    referencePreviewUrl = "";
+  }
+  if (!referenceFile) {
+    els.referencePreview.removeAttribute("src");
+    els.referenceName.textContent = "";
+    els.referencePreviewWrap.classList.add("hidden");
+    return;
+  }
+  referencePreviewUrl = URL.createObjectURL(referenceFile);
+  els.referencePreview.src = referencePreviewUrl;
+  els.referenceName.textContent = referenceFile.name;
+  els.referencePreviewWrap.classList.remove("hidden");
 }
 
 function bindDetection() {
@@ -97,15 +148,13 @@ function bindDetection() {
 }
 
 function bindTranslator() {
-  els.translatorToggle.addEventListener("click", () => {
-    els.translatorPanel.classList.toggle("collapsed");
-    if (!els.translatorPanel.classList.contains("collapsed")) els.translatorInput.focus();
-  });
-  els.translatorClose.addEventListener("click", () => {
-    els.translatorPanel.classList.add("collapsed");
-  });
+  bindTranslatorDragging();
+  els.translatorToggle.addEventListener("click", openTranslatorPanel);
+  els.translatorClose.addEventListener("click", closeTranslatorPanel);
   els.translatorSettingsToggle.addEventListener("click", () => {
-    els.translatorSettings.classList.toggle("hidden");
+    const isHidden = els.translatorSettings.classList.toggle("hidden");
+    els.translatorSettingsToggle.setAttribute("aria-expanded", String(!isHidden));
+    requestAnimationFrame(constrainTranslatorPanelToViewport);
   });
   els.translatorProvider.addEventListener("change", syncTranslatorProviderFields);
   els.saveTranslatorSettings.addEventListener("click", () => {
@@ -131,6 +180,105 @@ function bindTranslator() {
     if (source) els.translatorOutput.textContent = await explainNameWithTranslation(source);
   });
   syncTranslatorProviderFields();
+}
+
+function openTranslatorPanel(options = {}) {
+  const shouldFocus = options.focusInput !== false;
+  els.translatorPanel.classList.remove("collapsed");
+  els.translatorToggle.setAttribute("aria-expanded", "true");
+  requestAnimationFrame(() => {
+    constrainTranslatorPanelToViewport();
+    if (shouldFocus) els.translatorInput.focus();
+  });
+}
+
+function closeTranslatorPanel() {
+  finishTranslatorDrag();
+  els.translatorPanel.classList.add("collapsed");
+  els.translatorToggle.setAttribute("aria-expanded", "false");
+  requestAnimationFrame(() => els.translatorToggle.focus());
+}
+
+function bindTranslatorDragging() {
+  els.translatorDragHandle.addEventListener("pointerdown", startTranslatorDrag);
+  els.translatorDragHandle.addEventListener("keydown", moveTranslatorWithKeyboard);
+  window.addEventListener("pointermove", moveTranslatorDrag, { passive: false });
+  window.addEventListener("pointerup", finishTranslatorDrag);
+  window.addEventListener("pointercancel", finishTranslatorDrag);
+  window.addEventListener("resize", () => {
+    if (!els.translatorPanel.classList.contains("collapsed")) {
+      requestAnimationFrame(constrainTranslatorPanelToViewport);
+    }
+  });
+  window.visualViewport?.addEventListener("resize", constrainTranslatorPanelToViewport);
+  window.visualViewport?.addEventListener("scroll", constrainTranslatorPanelToViewport);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !els.translatorPanel.classList.contains("collapsed")) {
+      closeTranslatorPanel();
+    }
+  });
+}
+
+function startTranslatorDrag(event) {
+  if (event.button !== 0 || els.translatorPanel.classList.contains("collapsed")) return;
+  const rect = els.translatorPanel.getBoundingClientRect();
+  translatorDragState = {
+    pointerId: event.pointerId,
+    offsetX: event.clientX - rect.left,
+    offsetY: event.clientY - rect.top,
+  };
+  els.translatorPanel.classList.add("dragging");
+  if (event.pointerId != null) els.translatorDragHandle.setPointerCapture?.(event.pointerId);
+  event.preventDefault();
+}
+
+function moveTranslatorDrag(event) {
+  if (!translatorDragState || event.pointerId !== translatorDragState.pointerId) return;
+  positionTranslatorPanel(event.clientX - translatorDragState.offsetX, event.clientY - translatorDragState.offsetY);
+  event.preventDefault();
+}
+
+function finishTranslatorDrag(event) {
+  if (!translatorDragState || (event?.pointerId != null && event.pointerId !== translatorDragState.pointerId)) return;
+  const pointerId = translatorDragState.pointerId;
+  translatorDragState = null;
+  els.translatorPanel.classList.remove("dragging");
+  if (pointerId != null && els.translatorDragHandle.hasPointerCapture?.(pointerId)) {
+    els.translatorDragHandle.releasePointerCapture(pointerId);
+  }
+}
+
+function moveTranslatorWithKeyboard(event) {
+  if (els.translatorPanel.classList.contains("collapsed") || !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
+  const step = event.shiftKey ? 40 : 12;
+  const rect = els.translatorPanel.getBoundingClientRect();
+  const horizontal = event.key === "ArrowLeft" ? -step : event.key === "ArrowRight" ? step : 0;
+  const vertical = event.key === "ArrowUp" ? -step : event.key === "ArrowDown" ? step : 0;
+  positionTranslatorPanel(rect.left + horizontal, rect.top + vertical);
+  event.preventDefault();
+}
+
+function constrainTranslatorPanelToViewport() {
+  if (els.translatorPanel.classList.contains("collapsed")) return;
+  const rect = els.translatorPanel.getBoundingClientRect();
+  positionTranslatorPanel(rect.left, rect.top);
+}
+
+function positionTranslatorPanel(left, top) {
+  const margin = 8;
+  const viewport = window.visualViewport;
+  const viewportLeft = viewport?.offsetLeft || 0;
+  const viewportTop = viewport?.offsetTop || 0;
+  const viewportWidth = viewport?.width || window.innerWidth;
+  const viewportHeight = viewport?.height || window.innerHeight;
+  const minLeft = viewportLeft + margin;
+  const minTop = viewportTop + margin;
+  const maxLeft = Math.max(minLeft, viewportLeft + viewportWidth - els.translatorPanel.offsetWidth - margin);
+  const maxTop = Math.max(minTop, viewportTop + viewportHeight - els.translatorPanel.offsetHeight - margin);
+  els.translatorPanel.style.left = Math.min(Math.max(minLeft, left), maxLeft) + "px";
+  els.translatorPanel.style.top = Math.min(Math.max(minTop, top), maxTop) + "px";
+  els.translatorPanel.style.right = "auto";
+  els.translatorPanel.style.transform = "none";
 }
 
 function syncTranslatorProviderFields() {
@@ -287,14 +435,39 @@ function bindEditor() {
   els.problemFilter.addEventListener("click", toggleProblemFilter);
   els.removeSelected.addEventListener("click", removeSelectedAssets);
   els.exportFiles.addEventListener("click", exportRenamedFiles);
-  els.listViewSortMode.addEventListener("change", () => {
-    const next = parseListViewSortMode(els.listViewSortMode.value);
-    listDisplayMode = next.displayMode;
-    listSortMode = next.sortMode;
+  els.listDisplayModeSelect.addEventListener("change", () => {
+    listDisplayMode = normalizeListDisplayMode(els.listDisplayModeSelect.value);
+    albumPage = 1;
+    albumEditorOpen = listDisplayMode === "album" && Boolean(selectedId);
     assetRenderLimit = ASSET_RENDER_BATCH_SIZE;
     localStorage.setItem(LIST_DISPLAY_MODE_KEY, listDisplayMode);
-    localStorage.setItem(LIST_SORT_MODE_KEY, listSortMode);
+    fillListDisplayControls();
+    saveCurrentNamingSession();
     renderAssetList();
+  });
+  els.listSortModeSelect.addEventListener("change", () => {
+    listSortMode = normalizeListSortMode(els.listSortModeSelect.value);
+    albumPage = 1;
+    assetRenderLimit = ASSET_RENDER_BATCH_SIZE;
+    localStorage.setItem(LIST_SORT_MODE_KEY, listSortMode);
+    saveCurrentNamingSession();
+    renderAssetList();
+  });
+  [els.albumColumns, els.albumRows, els.albumColumnGap, els.albumRowGap].forEach((input) => {
+    const updateAlbumSettings = () => {
+      albumSettings = normalizeAlbumSettings({
+        columns: els.albumColumns.value,
+        rows: els.albumRows.value,
+        columnGap: els.albumColumnGap.value,
+        rowGap: els.albumRowGap.value,
+      });
+      albumPage = 1;
+      fillListDisplayControls();
+      saveCurrentNamingSession();
+      renderAssetList();
+    };
+    input.addEventListener("input", updateAlbumSettings);
+    input.addEventListener("change", updateAlbumSettings);
   });
   updateNamingRunButton();
   syncBatchOperationMode();

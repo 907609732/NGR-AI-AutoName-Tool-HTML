@@ -1,4 +1,4 @@
-/* NGR AssetPilot V2.23 module: assets-detection.js */
+/* NGR AssetPilot V2.25 module: assets-detection.js */
 function applyBatchSuffix() {
   const suffix = sanitizeName(els.batchSuffix.value);
   if (!suffix) {
@@ -90,11 +90,13 @@ function syncDetectionFilterButtons() {
 }
 
 function initNamingSessions() {
-  if (namingSessions.length) return;
-  const session = createNamingSessionRecord("命名记录 01");
-  namingSessions = [session];
-  activeNamingSessionId = session.id;
-  restoreNamingSession(session, { applyParams: false });
+  if (!namingSessions.length) {
+    const session = createNamingSessionRecord("命名记录 01");
+    namingSessions = [session];
+    activeNamingSessionId = session.id;
+  }
+  const session = getActiveNamingSession();
+  if (session) restoreNamingSession(session, { applyParams: namingWorkspaceWasRestored, persist: false });
 }
 
 function createNamingSessionRecord(name) {
@@ -108,6 +110,13 @@ function createNamingSessionRecord(name) {
     selectedId: null,
     showProblemOnly: false,
     assetRenderLimit: ASSET_RENDER_BATCH_SIZE,
+    referenceFile: null,
+    referenceName: "",
+    listDisplayMode: normalizeListDisplayMode(listDisplayMode),
+    listSortMode: normalizeListSortMode(listSortMode),
+    albumSettings: normalizeAlbumSettings(albumSettings),
+    albumPage: 1,
+    albumEditorOpen: false,
     params: collectNamingSessionParams(),
   };
 }
@@ -122,15 +131,23 @@ function collectNamingSessionParams() {
   };
 }
 
-function saveCurrentNamingSession() {
+function saveCurrentNamingSession(options = {}) {
   const session = getActiveNamingSession();
   if (!session) return;
   session.assets = assets;
   session.selectedId = selectedId;
   session.showProblemOnly = showProblemOnly;
   session.assetRenderLimit = assetRenderLimit;
+  session.referenceFile = referenceFile;
+  session.referenceName = referenceFile?.name || "";
+  session.listDisplayMode = normalizeListDisplayMode(listDisplayMode);
+  session.listSortMode = normalizeListSortMode(listSortMode);
+  session.albumSettings = normalizeAlbumSettings(albumSettings);
+  session.albumPage = normalizeAlbumPage(albumPage);
+  session.albumEditorOpen = Boolean(albumEditorOpen);
   session.params = collectNamingSessionParams();
   session.updatedAt = Date.now();
+  if (options.persist !== false) scheduleNamingWorkspaceSave();
 }
 
 function syncSessionNamingParams() {
@@ -139,6 +156,7 @@ function syncSessionNamingParams() {
   session.params = collectNamingSessionParams();
   session.updatedAt = Date.now();
   renderNamingSessionList();
+  scheduleNamingWorkspaceSave();
 }
 
 function getActiveNamingSession() {
@@ -146,15 +164,28 @@ function getActiveNamingSession() {
 }
 
 function restoreNamingSession(session, options = {}) {
+  if (referencePreviewUrl) {
+    URL.revokeObjectURL(referencePreviewUrl);
+    referencePreviewUrl = "";
+  }
   activeNamingSessionId = session.id;
   assets = session.assets || [];
   selectedId = assets.some((asset) => asset.id === session.selectedId) ? session.selectedId : assets[0]?.id || null;
   showProblemOnly = Boolean(session.showProblemOnly);
   assetRenderLimit = session.assetRenderLimit || ASSET_RENDER_BATCH_SIZE;
+  referenceFile = session.referenceFile || null;
+  listDisplayMode = normalizeListDisplayMode(session.listDisplayMode);
+  listSortMode = normalizeListSortMode(session.listSortMode);
+  albumSettings = normalizeAlbumSettings(session.albumSettings);
+  albumPage = normalizeAlbumPage(session.albumPage);
+  albumEditorOpen = Boolean(session.albumEditorOpen && selectedId);
   if (options.applyParams !== false) applyNamingSessionParams(session.params);
+  syncReferencePreview();
   syncProblemFilterButton();
+  fillListDisplayControls();
   renderNamingSessionList();
   renderAssetList();
+  if (options.persist !== false) scheduleNamingWorkspaceSave();
 }
 
 function applyNamingSessionParams(params) {
@@ -218,6 +249,7 @@ function renameNamingSession(sessionId = activeNamingSessionId) {
   session.name = trimmed;
   session.updatedAt = Date.now();
   renderNamingSessionList();
+  scheduleNamingWorkspaceSave();
   showToast("命名记录已重命名");
 }
 
@@ -236,6 +268,7 @@ function deleteNamingSession(sessionId = activeNamingSessionId) {
     restoreNamingSession(nextSession);
   } else {
     renderNamingSessionList();
+    scheduleNamingWorkspaceSave();
   }
   showToast("已删除命名记录");
 }
@@ -252,6 +285,7 @@ function toggleVisibleAssetSelection() {
   visibleAssets.forEach((asset) => {
     asset.checked = shouldSelect;
   });
+  saveCurrentNamingSession();
   renderAssetList();
   showToast((shouldSelect ? "已选中 " : "已取消选中 ") + visibleAssets.length + " 张图片");
 }
