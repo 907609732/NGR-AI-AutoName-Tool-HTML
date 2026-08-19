@@ -61,10 +61,18 @@ export function generateReleaseMetadata(edition) {
   fs.mkdirSync(artifactDirectory, { recursive: true });
   const packageJson = JSON.parse(fs.readFileSync(path.join(projectRoot, "package.json"), "utf8"));
   const version = packageJson.version;
-  const sbomPath = path.join(artifactDirectory, "sbom.cdx.json");
+  const editionLabel = edition === "test" ? "Test" : "Dev";
+  const metadataPrefix = `NGR-AssetPilot-${editionLabel}-${version}`;
+  const sbomName = `${metadataPrefix}-sbom.cdx.json`;
+  const checksumsName = `${metadataPrefix}-SHA256SUMS.txt`;
+  const manifestName = `${metadataPrefix}-build-manifest.json`;
+  const sbomPath = path.join(artifactDirectory, sbomName);
   generateSbom(sbomPath);
 
-  const excluded = new Set(["SHA256SUMS.txt", "build-manifest.json"]);
+  const excluded = new Set([
+    "SHA256SUMS.txt", "build-manifest.json", "sbom.cdx.json",
+    checksumsName, manifestName, sbomName,
+  ]);
   const artifactFiles = fs.readdirSync(artifactDirectory, { withFileTypes: true })
     .filter((entry) => entry.isFile() && !excluded.has(entry.name))
     .map((entry) => {
@@ -82,7 +90,7 @@ export function generateReleaseMetadata(edition) {
   }
 
   const checksums = artifactFiles.map(({ sha256, name }) => `${sha256} *${name}`).join("\n") + "\n";
-  fs.writeFileSync(path.join(artifactDirectory, "SHA256SUMS.txt"), checksums, "utf8");
+  fs.writeFileSync(path.join(artifactDirectory, checksumsName), checksums, "utf8");
 
   const manifest = {
     schemaVersion: 1,
@@ -109,7 +117,7 @@ export function generateReleaseMetadata(edition) {
     artifacts: artifactFiles,
   };
   fs.writeFileSync(
-    path.join(artifactDirectory, "build-manifest.json"),
+    path.join(artifactDirectory, manifestName),
     `${JSON.stringify(manifest, null, 2)}\n`,
     "utf8",
   );
