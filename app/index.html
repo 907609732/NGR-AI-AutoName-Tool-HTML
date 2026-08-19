@@ -4,10 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NGR AssetPilot｜AI资源领航</title>
-    <link rel="stylesheet" href="styles.css?v=V2.26" />
+    <link rel="stylesheet" href="styles.css?v=V3.0.0" />
   </head>
   <body>
     <div id="app">
+      <div class="test-build-banner hidden" id="testBuildBanner" role="status">
+        TEST BUILD · 内部测试版本含可逆混淆凭据，不得公开分发
+      </div>
       <header class="topbar">
         <button class="back-button hidden" id="backButton" type="button" aria-label="返回主界面">←</button>
         <div class="brand-lockup">
@@ -15,7 +18,7 @@
             <span class="brand-logo-core"></span>
           </div>
           <div class="topbar-title">
-            <h1><span class="brand-en">NGR AssetPilot</span><span class="brand-divider">｜</span><span class="brand-cn">AI资源领航</span> <span class="version-badge">V2.26</span></h1>
+            <h1><span class="brand-en">NGR AssetPilot</span><span class="brand-divider">｜</span><span class="brand-cn">AI资源领航</span> <span class="version-badge">V3.0.0</span> <span class="test-build-badge hidden" id="testBuildBadge">TEST BUILD</span></h1>
             <p id="pageHint">批量整理 UI 切图名称，让文件名保持统一、清楚、可追踪。</p>
           </div>
         </div>
@@ -34,6 +37,27 @@
             <span>UI切图检测</span>
             <small>上传文件夹后检测分辨率、背景图、大图和图集规范</small>
           </button>
+          <section class="workspace-migration-card" id="workspaceMigrationCard" aria-labelledby="workspaceMigrationTitle">
+            <div class="workspace-migration-copy">
+              <h2 id="workspaceMigrationTitle">工作区迁移与备份</h2>
+              <p id="workspaceMigrationIntro">导出或导入 .ngrap 迁移包，保留设置、命名进度、切图和参考图。</p>
+            </div>
+            <label class="workspace-secret-option">
+              <input id="includeBackupSecrets" type="checkbox" />
+              <span>导出时携带加密凭据</span>
+            </label>
+            <label class="workspace-password-field">
+              <span>迁移密码</span>
+              <input id="workspaceBackupPassword" type="password" minlength="12" autocomplete="new-password" placeholder="导入加密迁移包时填写密码" />
+            </label>
+            <div class="workspace-migration-actions">
+              <button id="exportWorkspaceBackup" class="ghost-action" type="button">导出 .ngrap</button>
+              <button id="importWorkspaceBackup" class="primary-action" type="button">导入 .ngrap</button>
+              <input id="workspaceBackupInput" class="hidden" type="file" accept=".ngrap,application/zip,application/vnd.ngr.assetpilot+zip" />
+            </div>
+            <p class="workspace-migration-note">凭据仅在勾选后写入迁移包，并使用 PBKDF2-SHA256（600,000 次）与 AES-256-GCM 加密。请妥善保存密码。</p>
+            <p class="workspace-migration-status" id="workspaceMigrationStatus" aria-live="polite">导入前会自动生成一份当前工作区备份。</p>
+          </section>
           <div class="signature">
             <span>by五成（月财）</span>
             <a href="https://github.com/907609732/NGR-AI-AutoName-Tool.git" target="_blank" rel="noreferrer">GitHub：907609732/NGR-AI-AutoName-Tool</a>
@@ -44,7 +68,7 @@
 
         <section class="view rules-view" id="rulesView">
           <div class="section-head">
-            <h2>命名规则 <span class="version-badge">V2.26</span><time class="version-date" datetime="2026-08-13">更新于 2026-08-13</time></h2>
+            <h2>命名规则 <span class="version-badge">V3.0.0</span><time class="version-date" datetime="2026-08-19">更新于 2026-08-19</time></h2>
             <p>这些设置会自动保存，并在命名流程中作为全局前缀使用。</p>
           </div>
 
@@ -200,7 +224,6 @@
             </div>
             <div class="action-row compact-actions">
               <button id="saveAiSettings" class="primary-action" type="button">保存 AI 配置</button>
-              <button id="useTempAiSettings" class="ghost-action" type="button">使用临时测试 API</button>
               <button id="testAiSettings" class="ghost-action" type="button">测试 API</button>
               <button id="exportAiSettings" class="ghost-action" type="button">导出 API 配置</button>
               <label class="file-action ghost-action">
@@ -683,20 +706,22 @@
       <div id="toast" class="toast hidden" role="status"></div>
     </div>
 
-    <script src="vendor/fflate-0.8.3.min.js?v=V2.26"></script>
-    <script src="API配置文件/local-config.js?v=V2.26"></script>
-    <script src="historical-knowledge.js?v=V2.26"></script>
-    <script src="js/config.js?v=V2.26"></script>
-    <script src="js/state-dom.js?v=V2.26"></script>
-    <script src="js/lifecycle-rules.js?v=V2.26"></script>
-    <script src="js/uploads-editor-translator.js?v=V2.26"></script>
-    <script src="js/ai-workflow.js?v=V2.26"></script>
-    <script src="js/assets-detection.js?v=V2.26"></script>
-    <script src="js/rendering.js?v=V2.26"></script>
-    <script src="js/naming-knowledge.js?v=V2.26"></script>
-    <script src="js/export-template-storage.js?v=V2.26"></script>
-    <script src="js/toast.js?v=V2.26"></script>
-    <script src="js/workspace-storage.js?v=V2.26"></script>
-    <script src="js/main.js?v=V2.26"></script>
+    <script src="vendor/fflate-0.8.3.min.js?v=V3.0.0"></script>
+    <script src="historical-knowledge.js?v=V3.0.0"></script>
+    <script src="js/config.js?v=V3.0.0"></script>
+    <script src="js/desktop-bridge.js?v=V3.0.0"></script>
+    <script src="js/workspace-backup.js?v=V3.0.0"></script>
+    <script src="js/state-dom.js?v=V3.0.0"></script>
+    <script src="js/lifecycle-rules.js?v=V3.0.0"></script>
+    <script src="js/uploads-editor-translator.js?v=V3.0.0"></script>
+    <script src="js/ai-workflow.js?v=V3.0.0"></script>
+    <script src="js/assets-detection.js?v=V3.0.0"></script>
+    <script src="js/rendering.js?v=V3.0.0"></script>
+    <script src="js/naming-knowledge.js?v=V3.0.0"></script>
+    <script src="js/export-template-storage.js?v=V3.0.0"></script>
+    <script src="js/toast.js?v=V3.0.0"></script>
+    <script src="js/workspace-storage.js?v=V3.0.0"></script>
+    <script src="js/workspace-migration.js?v=V3.0.0"></script>
+    <script src="js/main.js?v=V3.0.0"></script>
   </body>
 </html>

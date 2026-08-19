@@ -1,6 +1,7 @@
 import { MotionController } from "./motion";
 
 const githubUrl = "https://github.com/907609732/NGR-AI-AutoName-Tool";
+const releasesUrl = `${githubUrl}/releases`;
 
 const features = [
   {
@@ -80,8 +81,8 @@ export default function Home() {
           <a href="#workflow">使用流程</a>
           <a href="#security">安全说明</a>
         </nav>
-        <a className="header-cta" href={githubUrl} target="_blank" rel="noreferrer">
-          GitHub 下载
+        <a className="header-cta" href={releasesUrl} target="_blank" rel="noreferrer">
+          Windows 版下载
         </a>
       </header>
 
@@ -89,15 +90,15 @@ export default function Home() {
         <div className="hero-glow hero-glow-one" />
         <div className="hero-glow hero-glow-two" />
         <div className="hero-copy">
-          <div className="eyebrow"><span /> V2.23 · 游戏 UI 资源工作台</div>
+          <div className="eyebrow"><span /> V3.0.0 · Windows 桌面工作台</div>
           <h1>让每一张 UI 资源，<br /><em>驶向正确的名字。</em></h1>
           <p>
             NGR AssetPilot 将 AI 命名、团队知识库、规范检测和批量导出放进一个本地工作流，
             帮助美术与项目组更快整理资源、更少出错。
           </p>
           <div className="hero-actions">
-            <a className="primary-button" href={githubUrl} target="_blank" rel="noreferrer">
-              前往 GitHub 下载 <span aria-hidden="true">↗</span>
+            <a className="primary-button" href={releasesUrl} target="_blank" rel="noreferrer">
+              查看 Windows 发布版 <span aria-hidden="true">↗</span>
             </a>
             <a className="secondary-button" href="#features">查看核心能力</a>
           </div>
@@ -114,7 +115,7 @@ export default function Home() {
           <div className="product-window">
             <div className="window-bar">
               <div className="window-brand"><LogoMark compact /><strong>NGR AssetPilot</strong></div>
-              <span className="window-version">V2.23</span>
+              <span className="window-version">V3.0.0</span>
             </div>
             <div className="window-body">
               <aside className="window-sidebar">
@@ -226,11 +227,11 @@ export default function Home() {
         <div className="download-logo"><LogoMark /></div>
         <span className="section-label light">READY TO START</span>
         <h2>让资源管理，从名字开始变简单。</h2>
-        <p>下载 NGR AssetPilot｜AI资源领航，建立属于团队自己的 UI 资源规范工作流。</p>
-        <a className="primary-button lime" href={githubUrl} target="_blank" rel="noreferrer">
-          在 GitHub 获取项目 <span aria-hidden="true">↗</span>
+        <p>V3.0.0 提供 Windows 10/11 x64 安装版与便携版。正式发布物、SHA-256 与版本说明会统一展示在 GitHub Releases，不提供尚未生成的占位下载直链。</p>
+        <a className="primary-button lime" href={releasesUrl} target="_blank" rel="noreferrer">
+          查看 GitHub Releases <span aria-hidden="true">↗</span>
         </a>
-        <small>当前版本 V2.23 · 更新于 2026-06-29</small>
+        <small>当前版本 V3.0.0 · Windows 10/11 x64 · 安装版与便携版</small>
       </section>
 
       <footer>

@@ -178,7 +178,8 @@ async function requestAiRecommendations(asset, localRecommendations, signal) {
   const referenceImageUrl = referenceFile && isRasterImage(referenceFile) ? await imageFileToDataUrl(referenceFile, 960) : "";
   const prompt = buildAiPrompt(asset, localRecommendations);
   const apiFormat = aiSettings.apiFormat || "responses";
-  const response = await fetch(buildAiEndpoint(apiFormat), {
+  const response = await ngrFetch(buildAiEndpoint(apiFormat), {
+    service: "ai",
     method: "POST",
     signal,
     headers: {
@@ -285,18 +286,6 @@ function applyProviderPreset() {
   }
 }
 
-function useTempAiSettings() {
-  const localConfig = normalizeAiSettings(readLocalKimiConfig().apiKey ? readLocalKimiConfig() : readLocalAiConfig());
-  if (!localConfig.apiKey) {
-    showToast("未找到临时测试 API，请先配置 API配置文件/local-config.js");
-    return;
-  }
-  aiSettings = localConfig;
-  fillAiSettings();
-  saveAiSettings(aiSettings);
-  showToast("已使用临时测试 API 配置");
-}
-
 async function testAiSettings() {
   aiSettings = collectAiSettings();
   saveAiSettings(aiSettings);
@@ -308,7 +297,8 @@ async function testAiSettings() {
   els.testAiSettings.textContent = "测试中";
   try {
     const endpoint = buildAiEndpoint(aiSettings.apiFormat || "responses");
-    const response = await fetch(endpoint, {
+    const response = await ngrFetch(endpoint, {
+      service: "ai",
       method: "POST",
       headers: {
         "Content-Type": "application/json",

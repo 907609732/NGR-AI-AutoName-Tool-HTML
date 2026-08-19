@@ -25,7 +25,10 @@ test("server-renders the NGR AssetPilot official website", async () => {
   assert.match(html, /让每一张 UI 资源/);
   assert.match(html, /核心能力/);
   assert.match(html, /本地优先/);
-  assert.match(html, /GitHub 下载/);
+  assert.match(html, /V3\.0\.0/);
+  assert.match(html, /Windows 版下载/);
+  assert.match(html, /GitHub Releases/);
+  assert.match(html, /安装版与便携版/);
   assert.match(html, /og\.png/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 });

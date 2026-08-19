@@ -320,7 +320,7 @@ async function requestBaiduTranslate(query, from, to) {
   });
   let data;
   try {
-    const response = await fetch(translationSettings.baiduEndpoint + "?" + params.toString());
+    const response = await ngrFetch(translationSettings.baiduEndpoint + "?" + params.toString(), { service: "translation" });
     if (!response.ok) throw new Error("接口请求失败：" + response.status);
     data = await response.json();
   } catch (error) {
@@ -370,7 +370,8 @@ async function translateTextByModel(text) {
     "用户自定义提示文本：" + (rules.aiPromptText || "无"),
     "原始文件名：" + String(text || "").trim(),
   ].join("\n");
-  const response = await fetch(endpoint, {
+  const response = await ngrFetch(endpoint, {
+    service: "ai",
     method: "POST",
     headers: {
       "Content-Type": "application/json",

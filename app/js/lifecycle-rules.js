@@ -23,6 +23,7 @@ function init() {
   updateRulePreview();
   updateActiveRuleText();
   renderAssetList();
+  initializeWorkspaceMigration();
 }
 
 function protectEditableShortcuts(root = document) {
@@ -379,8 +380,6 @@ function bindRules() {
     saveAiSettings(aiSettings);
     showToast("AI 配置已保存");
   });
-
-  els.useTempAiSettings.addEventListener("click", useTempAiSettings);
 
   els.testAiSettings.addEventListener("click", testAiSettings);
 

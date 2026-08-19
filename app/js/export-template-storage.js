@@ -35,6 +35,13 @@ async function exportRenamedFiles() {
       return;
     }
 
+    if (window.NgrDesktopBridge?.hasCapability("files.selectExportDirectory")
+      && window.NgrDesktopBridge?.hasCapability("files.writeFile")) {
+      const projectCount = await exportAssetsToDesktopProjectFolders();
+      showToast(projectCount > 1 ? `导出完成，已创建 ${projectCount} 个工程文件夹` : `导出完成，已创建工程文件夹：${buildExportProjectFolderName(assets[0])}`);
+      return;
+    }
+
     if (!("showDirectoryPicker" in window)) {
       await exportAssetsAsZip();
       showToast("当前浏览器不支持创建文件夹，已自动下载工程 ZIP 压缩包");
@@ -51,6 +58,22 @@ async function exportRenamedFiles() {
   } finally {
     els.exportFiles.disabled = false;
   }
+}
+
+async function exportAssetsToDesktopProjectFolders() {
+  const selected = await window.NgrDesktopBridge.selectExportDirectory();
+  if (!selected?.token) throw new DOMException("用户取消选择导出目录", "AbortError");
+  const projectFolderNames = new Set();
+  for (const asset of assets) {
+    const projectFolderName = buildExportProjectFolderName(asset);
+    projectFolderNames.add(projectFolderName);
+    await window.NgrDesktopBridge.writeFileInChunks(
+      selected.token,
+      `${projectFolderName}/${buildExportName(asset)}`,
+      asset.file,
+    );
+  }
+  return projectFolderNames.size;
 }
 
 async function exportAssetsToProjectFolders() {
@@ -722,17 +745,18 @@ function collectAiSettings() {
 
 function loadAiSettings() {
   try {
-    return normalizeAiSettings({
-      ...readLocalAiConfig(),
-      ...JSON.parse(localStorage.getItem(AI_SETTINGS_KEY)),
-    });
+    return normalizeAiSettings(JSON.parse(localStorage.getItem(AI_SETTINGS_KEY)) || {});
   } catch {
-    return normalizeAiSettings(readLocalAiConfig());
+    return normalizeAiSettings();
   }
 }
 
 function saveAiSettings(nextSettings) {
-  localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(nextSettings));
+  const storedSettings = window.NgrDesktopBridge?.isDesktopRuntime()
+    ? { ...nextSettings, apiKey: "" }
+    : nextSettings;
+  localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(storedSettings));
+  if (window.NgrDesktopBridge?.isDesktopRuntime()) queueDesktopCredentialSave();
 }
 
 function collectTranslationSettings() {
@@ -760,26 +784,19 @@ function fillTranslationSettings() {
 
 function loadTranslationSettings() {
   try {
-    const localConfig = readLocalTranslationConfig();
     const savedConfig = JSON.parse(localStorage.getItem(TRANSLATION_SETTINGS_KEY)) || {};
-    return normalizeTranslationSettings({
-      ...savedConfig,
-      ...localConfig,
-      provider: localConfig.provider || savedConfig.provider,
-      baiduAppId: localConfig.baiduAppId || savedConfig.baiduAppId,
-      baiduSecret: localConfig.baiduSecret || savedConfig.baiduSecret,
-      baiduEndpoint: localConfig.baiduEndpoint || savedConfig.baiduEndpoint,
-      textBaseUrl: localConfig.textBaseUrl || savedConfig.textBaseUrl,
-      textApiKey: localConfig.textApiKey || savedConfig.textApiKey,
-      textModel: localConfig.textModel || savedConfig.textModel,
-    });
+    return normalizeTranslationSettings(savedConfig);
   } catch {
-    return normalizeTranslationSettings(readLocalTranslationConfig());
+    return normalizeTranslationSettings();
   }
 }
 
 function saveTranslationSettings(nextSettings) {
-  localStorage.setItem(TRANSLATION_SETTINGS_KEY, JSON.stringify(nextSettings));
+  const storedSettings = window.NgrDesktopBridge?.isDesktopRuntime()
+    ? { ...nextSettings, baiduAppId: "", baiduSecret: "", textApiKey: "" }
+    : nextSettings;
+  localStorage.setItem(TRANSLATION_SETTINGS_KEY, JSON.stringify(storedSettings));
+  if (window.NgrDesktopBridge?.isDesktopRuntime()) queueDesktopCredentialSave();
 }
 
 function loadMeaningCache() {
@@ -822,18 +839,6 @@ function normalizeAiSettings(nextSettings = {}) {
     model: nextSettings.model || "gpt-4.1-mini",
     providerNote: nextSettings.providerNote || "",
   };
-}
-
-function readLocalAiConfig() {
-  return window.NGR_LOCAL_AI_CONFIG || {};
-}
-
-function readLocalKimiConfig() {
-  return window.NGR_LOCAL_KIMI_CONFIG || {};
-}
-
-function readLocalTranslationConfig() {
-  return window.NGR_LOCAL_TRANSLATION_CONFIG || {};
 }
 
 function loadSchemes() {

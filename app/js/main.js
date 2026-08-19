@@ -2,9 +2,11 @@
 async function startApp() {
   resetAppLocalStorageOnVersionChange();
   bootstrapState();
+  await hydrateDesktopCredentials();
   await restoreNamingWorkspaceFromStorage();
   init();
   enableNamingWorkspacePersistence();
+  registerDesktopQuitPersistence();
 }
 
 startApp().catch((error) => {

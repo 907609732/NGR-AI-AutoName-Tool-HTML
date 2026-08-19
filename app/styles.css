@@ -225,6 +225,35 @@ main {
   display: none !important;
 }
 
+.test-build-banner {
+  position: sticky;
+  z-index: 80;
+  top: 0;
+  padding: 8px 20px;
+  border-bottom: 1px solid #f7bc48;
+  background: #fff3cd;
+  color: #7a4b00;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 850;
+  letter-spacing: 0.02em;
+}
+
+.test-build-badge {
+  display: inline-grid;
+  place-items: center;
+  min-height: 22px;
+  margin-left: 6px;
+  padding: 0 8px;
+  border: 1px solid #e39a12;
+  border-radius: 8px;
+  background: #fff3cd;
+  color: #7a4b00;
+  font-size: 11px;
+  font-weight: 900;
+  vertical-align: middle;
+}
+
 .home-view {
   min-height: calc(100vh - 140px);
   display: none;
@@ -308,6 +337,88 @@ main {
 .entry-button.primary {
   background: #f9fdfd;
   border-color: rgba(23, 126, 137, 0.42);
+}
+
+.workspace-migration-card {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(260px, 0.75fr);
+  gap: 14px 24px;
+  padding: 22px 24px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 10px 28px rgba(27, 36, 40, 0.06);
+}
+
+.workspace-migration-card.needs-migration {
+  border-color: rgba(23, 126, 137, 0.58);
+  box-shadow: 0 0 0 4px rgba(23, 126, 137, 0.08), 0 10px 28px rgba(27, 36, 40, 0.06);
+}
+
+.workspace-migration-copy {
+  grid-row: span 2;
+}
+
+.workspace-migration-copy p,
+.workspace-migration-note,
+.workspace-migration-status {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.workspace-secret-option,
+.workspace-password-field {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.workspace-secret-option input {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--primary);
+}
+
+.workspace-password-field {
+  display: grid;
+  grid-template-columns: auto 1fr;
+}
+
+.workspace-password-field input {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.workspace-migration-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.workspace-migration-actions button {
+  min-width: 130px;
+}
+
+.workspace-migration-note,
+.workspace-migration-status {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.workspace-migration-status {
+  color: var(--primary-strong);
+  font-weight: 700;
 }
 
 .section-head,
@@ -2071,6 +2182,23 @@ button:disabled {
 @media (max-width: 860px) {
   .home-view {
     grid-template-columns: minmax(260px, 1fr);
+  }
+
+  .workspace-migration-card {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace-migration-copy {
+    grid-row: auto;
+  }
+
+  .workspace-migration-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .workspace-migration-actions button {
+    width: 100%;
   }
 
   .translator-panel {
