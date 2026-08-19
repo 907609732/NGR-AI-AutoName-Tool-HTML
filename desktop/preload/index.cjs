@@ -20,7 +20,25 @@ const channels = Object.freeze({
   updaterDownload: "ngr:updater:download",
   updaterInstall: "ngr:updater:install",
   updaterGetState: "ngr:updater:get-state",
+  updaterStateChanged: "ngr:updater:state-changed",
   shellOpenExternal: "ngr:shell:open-external",
+  localImageSearchGetModelStatus: "ngr:local-image-search:get-model-status",
+  localImageSearchDownloadModel: "ngr:local-image-search:download-model",
+  localImageSearchCancelModelDownload: "ngr:local-image-search:cancel-model-download",
+  localImageSearchImportModel: "ngr:local-image-search:import-model",
+  localImageSearchExportModel: "ngr:local-image-search:export-model",
+  localImageSearchRemoveModel: "ngr:local-image-search:remove-model",
+  localImageSearchListLibraries: "ngr:local-image-search:list-libraries",
+  localImageSearchCreateLibrary: "ngr:local-image-search:create-library",
+  localImageSearchRemoveLibrary: "ngr:local-image-search:remove-library",
+  localImageSearchStartIndex: "ngr:local-image-search:start-index",
+  localImageSearchGetJobStatus: "ngr:local-image-search:get-job-status",
+  localImageSearchCancelJob: "ngr:local-image-search:cancel-job",
+  localImageSearchSearchByImage: "ngr:local-image-search:search-by-image",
+  localImageSearchSearchByText: "ngr:local-image-search:search-by-text",
+  localImageSearchGetThumbnail: "ngr:local-image-search:get-thumbnail",
+  localImageSearchOpenResult: "ngr:local-image-search:open-result",
+  localImageSearchRevealResult: "ngr:local-image-search:reveal-result",
   appBeforeQuit: "ngr:app:before-quit",
   appReadyToQuit: "ngr:app:ready-to-quit",
 });
@@ -61,6 +79,12 @@ const api = deepFreeze({
     download: () => invoke(channels.updaterDownload),
     install: () => invoke(channels.updaterInstall),
     getState: () => invoke(channels.updaterGetState),
+    onStateChanged(callback) {
+      if (typeof callback !== "function") throw new TypeError("callback must be a function");
+      const listener = (_event, state) => callback(state);
+      ipcRenderer.on(channels.updaterStateChanged, listener);
+      return () => ipcRenderer.removeListener(channels.updaterStateChanged, listener);
+    },
   },
   shell: {
     openExternal: (urlOrRequest) =>
@@ -68,6 +92,25 @@ const api = deepFreeze({
         channels.shellOpenExternal,
         typeof urlOrRequest === "string" ? { url: urlOrRequest } : urlOrRequest,
       ),
+  },
+  localImageSearch: {
+    getModelStatus: () => invoke(channels.localImageSearchGetModelStatus),
+    downloadModel: () => invoke(channels.localImageSearchDownloadModel),
+    cancelModelDownload: () => invoke(channels.localImageSearchCancelModelDownload),
+    importModel: () => invoke(channels.localImageSearchImportModel),
+    exportModel: () => invoke(channels.localImageSearchExportModel),
+    removeModel: () => invoke(channels.localImageSearchRemoveModel),
+    listLibraries: () => invoke(channels.localImageSearchListLibraries),
+    createLibrary: () => invoke(channels.localImageSearchCreateLibrary),
+    removeLibrary: (request) => invoke(channels.localImageSearchRemoveLibrary, request),
+    startIndex: (request) => invoke(channels.localImageSearchStartIndex, request),
+    getJobStatus: (request) => invoke(channels.localImageSearchGetJobStatus, request),
+    cancelJob: (request) => invoke(channels.localImageSearchCancelJob, request),
+    searchByImage: (request) => invoke(channels.localImageSearchSearchByImage, request),
+    searchByText: (request) => invoke(channels.localImageSearchSearchByText, request),
+    getThumbnail: (request) => invoke(channels.localImageSearchGetThumbnail, request),
+    openResult: (request) => invoke(channels.localImageSearchOpenResult, request),
+    revealResult: (request) => invoke(channels.localImageSearchRevealResult, request),
   },
   app: {
     onBeforeQuit(callback) {

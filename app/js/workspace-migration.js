@@ -5,7 +5,7 @@
   const SETTINGS_SCHEMA_VERSION = 1;
   const MIGRATION_NOTICE_KEY = "ngr-assetpilot-desktop-migration-v1";
   const settingsKeys = () => [APP_VERSION_KEY, ...APP_STORAGE_KEYS];
-  let desktopInfo = { isDesktop: false, isTestBuild: false };
+  let desktopInfo = { isDesktop: false, edition: "dev" };
   let credentialSaveChain = Promise.resolve();
   let desktopQuitListenerBound = false;
 
@@ -458,12 +458,17 @@
       desktopInfo = await globalScope.NgrDesktopBridge.getInfo();
     } catch (error) {
       console.warn("无法读取桌面版本信息", error?.message || error);
-      desktopInfo = { isDesktop: isDesktop(), isTestBuild: false };
+      desktopInfo = { isDesktop: isDesktop(), edition: "dev" };
     }
     document.documentElement.classList.toggle("desktop-runtime", Boolean(desktopInfo.isDesktop));
-    const isTestBuild = Boolean(desktopInfo.isTestBuild || desktopInfo.channel === "test" || /-test(?:\.|$)/i.test(String(desktopInfo.version || "")));
-    els.testBuildBanner?.classList.toggle("hidden", !isTestBuild);
-    els.testBuildBadge?.classList.toggle("hidden", !isTestBuild);
+    const editionBadge = document.getElementById("editionBadge");
+    if (editionBadge && desktopInfo.isDesktop) {
+      const isTest = desktopInfo.edition === "test";
+      editionBadge.textContent = isTest ? "TEST 测试版" : "DEV 开发版";
+      editionBadge.classList.remove("hidden", "dev", "test");
+      editionBadge.classList.add(isTest ? "test" : "dev");
+      document.title = `${isTest ? "NGR AssetPilot Test" : "NGR AssetPilot Dev"}｜AI资源领航`;
+    }
     if (els.workspaceMigrationIntro && desktopInfo.isDesktop && !localStorage.getItem(MIGRATION_NOTICE_KEY)) {
       els.workspaceMigrationIntro.textContent = "首次使用桌面版？请从原网页版导出 .ngrap，再在这里导入。原数据不会被自动删除。";
       els.workspaceMigrationCard?.classList.add("needs-migration");

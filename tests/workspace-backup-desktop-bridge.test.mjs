@@ -10,7 +10,7 @@ const migrationSource = fs.readFileSync(new URL("../app/js/workspace-migration.j
 function createBridgeContext(overrides = {}) {
   const calls = [];
   const native = {
-    environment: { getInfo: async () => ({ channel: "test", isTestBuild: true }) },
+    environment: { getInfo: async () => ({ edition: "dev", distribution: "development" }) },
     credentials: {
       getStatus: async () => ({ configured: true }),
       get: async () => ({ ai: { apiKey: "test-only" } }),
@@ -151,7 +151,7 @@ test("退出协调桥接转交 requestId，避免主进程等待超时", () => {
   assert.ok(calls.some(([name]) => name === "app.unsubscribe"));
 });
 
-test("测试版密钥 payload 的 Kimi 与百度字段能映射到现有设置模型", () => {
+test("旧凭据 payload 的 Kimi 与百度字段能映射到现有设置模型", () => {
   const context = { window: {} };
   vm.createContext(context);
   vm.runInContext(migrationSource, context);

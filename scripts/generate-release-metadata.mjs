@@ -55,11 +55,12 @@ function generateSbom(outputPath) {
   fs.writeFileSync(outputPath, result.stdout, "utf8");
 }
 
-export function generateReleaseMetadata({ channel = "release" } = {}) {
-  const artifactDirectory = channel === "test" ? projectPaths.testArtifacts : projectPaths.releaseArtifacts;
+export function generateReleaseMetadata(edition) {
+  if (!['dev', 'test'].includes(edition)) throw new Error("版本必须是 dev 或 test");
+  const artifactDirectory = projectPaths[`${edition}Artifacts`];
   fs.mkdirSync(artifactDirectory, { recursive: true });
   const packageJson = JSON.parse(fs.readFileSync(path.join(projectRoot, "package.json"), "utf8"));
-  const version = channel === "test" ? "3.0.0-test.1" : packageJson.version;
+  const version = packageJson.version;
   const sbomPath = path.join(artifactDirectory, "sbom.cdx.json");
   generateSbom(sbomPath);
 
@@ -85,8 +86,8 @@ export function generateReleaseMetadata({ channel = "release" } = {}) {
 
   const manifest = {
     schemaVersion: 1,
-    product: "NGR AssetPilot",
-    channel,
+    product: edition === "test" ? "NGR AssetPilot Test" : "NGR AssetPilot Dev",
+    edition,
     version,
     generatedAt: new Date().toISOString(),
     gitCommit: runGit(["rev-parse", "HEAD"]),
@@ -97,6 +98,9 @@ export function generateReleaseMetadata({ channel = "release" } = {}) {
       electron: packageJson.devDependencies.electron,
       electronBuilder: packageJson.devDependencies["electron-builder"],
       electronUpdater: packageJson.dependencies["electron-updater"],
+      transformersJs: packageJson.dependencies["@huggingface/transformers"],
+      onnxRuntimeNode: packageJson.dependencies["onnxruntime-node"],
+      sharp: packageJson.dependencies.sharp,
       playwright: packageJson.devDependencies["@playwright/test"],
     },
     platform: "windows",
@@ -114,9 +118,9 @@ export function generateReleaseMetadata({ channel = "release" } = {}) {
 
 const isCli = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isCli) {
-  const channel = process.argv[2] === "test" ? "test" : "release";
   try {
-    const manifest = generateReleaseMetadata({ channel });
+    if (process.argv.length !== 3) throw new Error("请指定 dev 或 test");
+    const manifest = generateReleaseMetadata(process.argv[2]);
     console.log(`发布元数据已生成：${manifest.artifacts.length} 个文件，版本 ${manifest.version}`);
   } catch (error) {
     console.error(error instanceof Error ? error.message : "发布元数据生成失败");

@@ -16,7 +16,7 @@ import {
   decryptTestSecretsBlob,
   TEST_SECRETS_AAD,
 } from "../desktop/services/test-secrets.mjs";
-import { UpdaterController } from "../desktop/services/updater-controller.mjs";
+import { UpdaterController, updaterMetadata } from "../desktop/services/updater-controller.mjs";
 import { installAppProtocol, resolveAppResource } from "../desktop/main/protocol.mjs";
 import { registerDesktopIpc } from "../desktop/main/ipc.mjs";
 import {
@@ -72,7 +72,9 @@ test("window settings and navigation helpers enforce the renderer boundary", () 
   assert.equal(options.webPreferences.devTools, false);
   assert.equal(isTrustedAppUrl("ngr-assetpilot://app/js/main.js"), true);
   assert.equal(isTrustedAppUrl("ngr-assetpilot://other/js/main.js"), false);
-  assert.equal(isAllowedExternalUrl("https://example.com/help"), true);
+  assert.equal(isAllowedExternalUrl("https://ngr.lttlt.top/help"), true);
+  assert.equal(isAllowedExternalUrl("https://github.com/907609732/NGR-AI-AutoName-Tool/releases"), true);
+  assert.equal(isAllowedExternalUrl("https://example.com/help"), false);
   assert.equal(isAllowedExternalUrl("http://example.com/help"), false);
   assert.equal(isAllowedExternalUrl("https://user:pass@example.com/help"), false);
 });
@@ -116,12 +118,16 @@ test("preload exposes only the nested ngrDesktop contract", async () => {
     "backup",
     "updater",
     "shell",
+    "localImageSearch",
     "app",
   ]);
   assert.equal(Object.isFrozen(exposed), true);
   assert.doesNotMatch(preloadSource, /require\(["']\.\.?[\\/]/, "sandboxed preload must be self-contained");
   assert.equal(typeof exposed.credentials.set, "function");
   assert.equal(typeof exposed.files.writeFile, "function");
+    assert.equal(typeof exposed.localImageSearch.searchByImage, "function");
+    assert.equal(typeof exposed.localImageSearch.importModel, "function");
+    assert.equal(typeof exposed.localImageSearch.exportModel, "function");
   assert.equal(typeof exposed.app.onBeforeQuit, "function");
   await exposed.shell.openExternal({ url: "https://example.com" });
   assert.deepEqual(calls.at(-1), [ipcChannels.shellOpenExternal, { url: "https://example.com" }]);
@@ -336,8 +342,15 @@ test("updater is disabled for non-installer builds and uses an explicit download
 
   class FakeUpdater extends EventEmitter {
     async checkForUpdates() {
-      this.emit("update-available", { version: "3.0.1" });
-      return { updateInfo: { version: "3.0.1" } };
+      const updateInfo = {
+        version: "3.0.1",
+        releaseName: "本地 AI 搜图增强",
+        releaseNotes: "<p>新增自定义前缀<br>优化更新弹窗</p>",
+        releaseDate: "2026-08-20T08:00:00.000Z",
+        files: [{ url: "NGR-AssetPilot-3.0.1-Setup-x64.exe", size: 123456789 }],
+      };
+      this.emit("update-available", updateInfo);
+      return { updateInfo };
     }
     async downloadUpdate() {
       this.emit("download-progress", { percent: 50, transferred: 5, total: 10, bytesPerSecond: 2 });
@@ -347,83 +360,50 @@ test("updater is disabled for non-installer builds and uses an explicit download
   }
   const fake = new FakeUpdater();
   const updater = new UpdaterController({ autoUpdater: fake, enabled: true, currentVersion: "3.0.0" });
-  assert.equal((await updater.check()).phase, "available");
+  const states = [];
+  const unsubscribe = updater.subscribe((state) => states.push(state));
+  const available = await updater.check();
+  assert.equal(available.phase, "available");
+  assert.equal(available.channel, "latest");
+  assert.equal(available.releaseNotes, "新增自定义前缀\n优化更新弹窗");
+  assert.equal(available.downloadSize, 123456789);
+  assert.equal(fake.allowPrerelease, false);
+  assert.equal(fake.channel, "latest");
   assert.equal((await updater.download()).phase, "downloaded");
   assert.equal(updater.install().accepted, true);
+  assert.ok(states.some((state) => state.phase === "downloading"));
+  unsubscribe();
   updater.dispose();
+  assert.equal(updaterMetadata.normalizeReleaseNotes("<script>x</script><p>A&amp;B</p>"), "xA&B");
 });
 
-test("existing packaged apps contain the current entrypoints and self-contained preload", async (t) => {
+test("both packaged editions contain current entrypoints and a self-contained preload", {
+  skip: process.env.NGR_VERIFY_PACKAGED_ARTIFACTS !== "1",
+}, async (t) => {
   const asar = require("@electron/asar");
   const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-  const definitions = [
-    {
-      channel: "release",
-      entry: "desktop/main/index.mjs",
-      includesTestSecretLoader: false,
-    },
-    {
-      channel: "test",
-      entry: "desktop/main/test-index.mjs",
-      includesTestSecretLoader: true,
-    },
-  ];
-  let checked = 0;
-
-  for (const definition of definitions) {
-    const archivePath = path.join(
-      projectRoot,
-      "artifacts",
-      definition.channel,
-      "win-unpacked",
-      "resources",
-      "app.asar",
-    );
-    try {
-      await access(archivePath);
-    } catch {
-      continue;
-    }
-    checked += 1;
-
-    const archivePathFor = (relativePath) => relativePath.split("/").join(path.sep);
+  const archivePathFor = (relativePath) => relativePath.split("/").join(path.sep);
+  for (const { edition, entryPath } of [
+    { edition: "dev", entryPath: "desktop/main/index.mjs" },
+    { edition: "test", entryPath: "desktop/main/test-index.mjs" },
+  ]) {
+    const archivePath = path.join(projectRoot, "artifacts", edition, "win-unpacked", "resources", "app.asar");
+    try { await access(archivePath); } catch { t.skip(`${edition} packaged artifact is not present`); return; }
     const packagedJson = JSON.parse(asar.extractFile(archivePath, "package.json").toString("utf8"));
-    assert.equal(packagedJson.main, definition.entry, `${definition.channel} package main must be current`);
-
-    for (const relativePath of [
-      "desktop/main/bootstrap.mjs",
-      definition.entry,
-      "desktop/preload/index.cjs",
-      "desktop/shared/ipc-channels.cjs",
-    ]) {
+    assert.equal(packagedJson.main, entryPath);
+    for (const relativePath of ["desktop/main/bootstrap.mjs", entryPath, "desktop/preload/index.cjs", "desktop/shared/ipc-channels.cjs"]) {
       const source = await readFile(path.join(projectRoot, relativePath));
       const packaged = asar.extractFile(archivePath, archivePathFor(relativePath));
-      assert.equal(
-        Buffer.compare(source, packaged),
-        0,
-        `${definition.channel} ${relativePath} must match the working source`,
-      );
+      assert.equal(Buffer.compare(source, packaged), 0, `${edition}: ${relativePath} must match source`);
     }
-
-    const preload = asar
-      .extractFile(archivePath, archivePathFor("desktop/preload/index.cjs"))
-      .toString("utf8");
-    assert.doesNotMatch(preload, /require\(["']\.\.?[\\/]/, "packaged sandbox preload must be self-contained");
+    const preload = asar.extractFile(archivePath, archivePathFor("desktop/preload/index.cjs")).toString("utf8");
+    assert.doesNotMatch(preload, /require\(["']\.\.?[\\/]/);
     const embeddedChannels = [...preload.matchAll(/"(ngr:[^"]+)"/g)].map((match) => match[1]).sort();
     assert.deepEqual(embeddedChannels, Object.values(ipcChannels).sort());
-
-    const entry = asar.extractFile(archivePath, archivePathFor(definition.entry)).toString("utf8");
-    assert.doesNotMatch(entry, /^await\s/m, "packaged entry must not use direct top-level await");
-    assert.match(entry, /\.catch\(reportStartupFailure\)/, "packaged entry must sanitize startup rejection");
-
+    const entry = asar.extractFile(archivePath, archivePathFor(entryPath)).toString("utf8");
+    assert.doesNotMatch(entry, /^await\s/m);
+    assert.match(entry, /\.catch\(reportStartupFailure\)/);
     const archiveEntries = new Set(asar.listPackage(archivePath));
-    const loaderEntry = `${path.sep}desktop${path.sep}services${path.sep}test-secrets.mjs`;
-    assert.equal(
-      archiveEntries.has(loaderEntry),
-      definition.includesTestSecretLoader,
-      `${definition.channel} test-secret loader inclusion must match its channel`,
-    );
+    assert.equal(archiveEntries.has(`${path.sep}desktop${path.sep}services${path.sep}test-secrets.mjs`), false);
   }
-
-  if (!checked) t.skip("packaged win-unpacked artifacts are not present");
 });

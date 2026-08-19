@@ -172,7 +172,7 @@ const isCli = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath
 if (isCli) {
   try {
     buildTestSecrets({ sourcePath: resolveCliSourcePath() });
-    console.log("测试版密钥密文已生成；未输出任何凭据值。");
+    console.log("开发测试用密钥密文已生成；未输出任何凭据值。");
   } catch (error) {
     console.error(`测试密钥生成失败：${error instanceof Error ? error.message : "未知错误"}`);
     process.exitCode = 1;

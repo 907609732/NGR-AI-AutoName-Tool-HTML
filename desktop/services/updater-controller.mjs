@@ -7,17 +7,60 @@ function cloneState(state) {
   };
 }
 
+function stripMarkup(value) {
+  return String(value || "")
+    .replace(/<br\s*\/?\s*>/gi, "\n")
+    .replace(/<\/p\s*>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    .slice(0, 20_000);
+}
+
+function normalizeReleaseNotes(releaseNotes) {
+  if (Array.isArray(releaseNotes)) {
+    return releaseNotes.map((entry) => stripMarkup(entry?.note)).filter(Boolean).join("\n\n");
+  }
+  return stripMarkup(releaseNotes);
+}
+
+function getDownloadSize(info) {
+  const files = Array.isArray(info?.files) ? info.files : [];
+  const installer = files.find((file) => String(file?.url || "").toLowerCase().endsWith(".exe")) || files[0];
+  return Number.isFinite(installer?.size) && installer.size > 0 ? installer.size : null;
+}
+
 export class UpdaterController {
-  constructor({ autoUpdater = null, enabled = false, currentVersion = "0.0.0" } = {}) {
+  constructor({
+    autoUpdater = null,
+    enabled = false,
+    currentVersion = "0.0.0",
+    websiteUrl = "https://ngr.lttlt.top/",
+    historyUrl = "https://github.com/907609732/NGR-AI-AutoName-Tool/releases",
+  } = {}) {
     this.autoUpdater = autoUpdater;
     this.enabled = Boolean(enabled && autoUpdater);
     this.listeners = [];
+    this.stateListeners = new Set();
     this.inFlight = null;
     this.state = {
       enabled: this.enabled,
       phase: this.enabled ? "idle" : "disabled",
       currentVersion,
+      channel: "latest",
       availableVersion: null,
+      releaseName: null,
+      releaseNotes: "",
+      releaseDate: null,
+      downloadSize: null,
+      websiteUrl,
+      historyUrl,
       progress: null,
       errorCode: null,
     };
@@ -29,13 +72,20 @@ export class UpdaterController {
     this.autoUpdater.autoDownload = false;
     this.autoUpdater.autoInstallOnAppQuit = false;
     this.autoUpdater.allowPrerelease = false;
+    this.autoUpdater.channel = "latest";
 
     this.#on("checking-for-update", () => this.#patch({ phase: "checking", errorCode: null }));
-    this.#on("update-available", (info) =>
-      this.#patch({ phase: "available", availableVersion: String(info?.version || "") || null }),
-    );
+    this.#on("update-available", (info) => this.#applyUpdateInfo(info, "available"));
     this.#on("update-not-available", () =>
-      this.#patch({ phase: "not-available", availableVersion: null, progress: null }),
+      this.#patch({
+        phase: "not-available",
+        availableVersion: null,
+        releaseName: null,
+        releaseNotes: "",
+        releaseDate: null,
+        downloadSize: null,
+        progress: null,
+      }),
     );
     this.#on("download-progress", (progress) =>
       this.#patch({
@@ -48,13 +98,10 @@ export class UpdaterController {
         },
       }),
     );
-    this.#on("update-downloaded", (info) =>
-      this.#patch({
-        phase: "downloaded",
-        availableVersion: String(info?.version || this.state.availableVersion || "") || null,
-        progress: { ...(this.state.progress || {}), percent: 100 },
-      }),
-    );
+    this.#on("update-downloaded", (info) => {
+      this.#applyUpdateInfo(info, "downloaded");
+      this.#patch({ progress: { ...(this.state.progress || {}), percent: 100 } });
+    });
     this.#on("error", (error) =>
       this.#patch({ phase: "error", errorCode: errorCodeOnly(error, "UPDATER_ERROR"), progress: null }),
     );
@@ -67,6 +114,21 @@ export class UpdaterController {
 
   #patch(change) {
     this.state = { ...this.state, ...change };
+    const snapshot = this.getState();
+    this.stateListeners.forEach((listener) => {
+      try { listener(snapshot); } catch {}
+    });
+  }
+
+  #applyUpdateInfo(info, phase) {
+    this.#patch({
+      phase,
+      availableVersion: String(info?.version || this.state.availableVersion || "") || null,
+      releaseName: String(info?.releaseName || "") || null,
+      releaseNotes: normalizeReleaseNotes(info?.releaseNotes),
+      releaseDate: String(info?.releaseDate || "") || null,
+      downloadSize: getDownloadSize(info),
+    });
   }
 
   #assertEnabled() {
@@ -79,6 +141,12 @@ export class UpdaterController {
     return cloneState(this.state);
   }
 
+  subscribe(listener) {
+    if (typeof listener !== "function") throw new TypeError("Updater listener must be a function");
+    this.stateListeners.add(listener);
+    return () => this.stateListeners.delete(listener);
+  }
+
   async check() {
     this.#assertEnabled();
     if (this.inFlight) return this.inFlight;
@@ -86,9 +154,10 @@ export class UpdaterController {
     this.inFlight = (async () => {
       try {
         const result = await this.autoUpdater.checkForUpdates();
-        const version = result?.updateInfo?.version;
+        const info = result?.updateInfo;
+        const version = info?.version;
         if (version && version !== this.state.currentVersion && this.state.phase === "checking") {
-          this.#patch({ phase: "available", availableVersion: String(version) });
+          this.#applyUpdateInfo(info, "available");
         }
         return this.getState();
       } catch (error) {
@@ -138,5 +207,8 @@ export class UpdaterController {
       this.autoUpdater.removeListener(eventName, listener);
     }
     this.listeners = [];
+    this.stateListeners.clear();
   }
 }
+
+export const updaterMetadata = Object.freeze({ normalizeReleaseNotes, getDownloadSize });

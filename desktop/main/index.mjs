@@ -1,3 +1,4 @@
 import { reportStartupFailure, runDesktopApp } from "./bootstrap.mjs";
 
-void runDesktopApp().catch(reportStartupFailure);
+const edition = process.argv.includes("--ngr-edition=test") ? "test" : "dev";
+void runDesktopApp({ edition }).catch(reportStartupFailure);

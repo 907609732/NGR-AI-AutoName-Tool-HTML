@@ -84,27 +84,59 @@ function containsBuffer(filePath, needle) {
   }
 }
 
-export function scanArtifacts({ channel = "release", env = process.env } = {}) {
-  const artifactDirectory = channel === "test" ? projectPaths.testArtifacts : projectPaths.releaseArtifacts;
+function encodeKnownSecretNeedles(secretPairs) {
+  const encoders = [
+    ["UTF-8", (value) => Buffer.from(value, "utf8")],
+    ["UTF-16LE", (value) => Buffer.from(value, "utf16le")],
+    ["Base64", (value) => Buffer.from(Buffer.from(value, "utf8").toString("base64"), "ascii")],
+    ["Hex", (value) => Buffer.from(Buffer.from(value, "utf8").toString("hex"), "ascii")],
+  ];
+  return secretPairs.flatMap(([label, value]) => encoders.map(([encoding, encode]) => [
+    `${label} (${encoding})`,
+    encode(value),
+  ]));
+}
+
+export function scanArtifacts({ edition, env = process.env } = {}) {
+  if (!['dev', 'test'].includes(edition)) throw new Error("版本必须是 dev 或 test");
+  const artifactDirectory = projectPaths[`${edition}Artifacts`];
   const files = walkFiles(artifactDirectory);
   if (files.length === 0) {
-    throw new Error(`没有可扫描的 ${channel} 构建产物`);
+    throw new Error("没有可扫描的构建产物");
   }
 
-  const forbidden = collectKnownSecrets(env).map(([label, value]) => [label, Buffer.from(value, "utf8")]);
-  if (channel === "release") {
-    forbidden.push(
-      ["测试密钥文件名", Buffer.from("test-secrets.bin", "utf8")],
-      ["测试密钥模块名", Buffer.from("test-secrets-key.mjs", "utf8")],
-      ["测试密钥 magic", Buffer.from("NGRSEC1\0", "ascii")],
-    );
-  }
+  const knownSecrets = collectKnownSecrets(env);
+  const forbidden = encodeKnownSecretNeedles(knownSecrets);
+  const forbiddenFileNames = new Set();
+  forbiddenFileNames.add("test-secrets.bin");
+  forbiddenFileNames.add("test-secrets-key.mjs");
+  forbiddenFileNames.add("test-secrets.mjs");
+  forbidden.push(
+    ["测试密钥文件名", Buffer.from("test-secrets.bin", "utf8")],
+    ["测试密钥模块名", Buffer.from("test-secrets-key.mjs", "utf8")],
+    ["测试密钥加载器名", Buffer.from("test-secrets.mjs", "utf8")],
+    ["测试密钥 magic", Buffer.from("NGRSEC1\0", "ascii")],
+  );
 
   const findings = [];
   for (const filePath of files) {
+    const relativeFile = path.relative(artifactDirectory, filePath);
+    const isBuilderDebugMetadata = relativeFile === "builder-debug.yml";
+    if (forbiddenFileNames.has(path.basename(filePath).toLowerCase())) {
+      findings.push({ label: "测试密钥文件路径", file: relativeFile });
+    }
     for (const [label, needle] of forbidden) {
+      // electron-builder records the configured exclusion rules in this local
+      // debug file. Keep scanning it for real credential values and the binary
+      // magic, but do not treat the names inside explicit `!…` rules as a leak.
+      if (
+        isBuilderDebugMetadata
+        && ["测试密钥文件名", "测试密钥模块名", "测试密钥加载器名"].includes(label)
+      ) {
+        continue;
+      }
       if (containsBuffer(filePath, needle)) {
-        findings.push({ label, file: path.relative(artifactDirectory, filePath) });
+        findings.push({ label, file: relativeFile });
       }
     }
   }
@@ -113,14 +145,14 @@ export function scanArtifacts({ channel = "release", env = process.env } = {}) {
     const locations = findings.map(({ label, file }) => `${label} @ ${file}`).join("；");
     throw new Error(`凭据扫描未通过：${locations}`);
   }
-  return { artifactDirectory, fileCount: files.length, knownSecretCount: collectKnownSecrets(env).length };
+  return { artifactDirectory, fileCount: files.length, knownSecretCount: knownSecrets.length };
 }
 
 const isCli = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isCli) {
-  const channel = process.argv[2] === "test" ? "test" : "release";
   try {
-    const result = scanArtifacts({ channel });
+    if (process.argv.length !== 3) throw new Error("请指定 dev 或 test");
+    const result = scanArtifacts({ edition: process.argv[2] });
     console.log(`凭据扫描通过：检查 ${result.fileCount} 个文件，未输出任何凭据值。`);
   } catch (error) {
     console.error(error instanceof Error ? error.message : "凭据扫描失败");

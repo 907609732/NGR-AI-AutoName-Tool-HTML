@@ -131,8 +131,8 @@ function buildExportProjectFolderName(asset) {
 
 function buildExportArchiveName(projectFolderNames) {
   if (projectFolderNames.length === 1) return `${projectFolderNames[0]}.zip`;
-  const currentProjectName = sanitizeName(rules.projectName).replace(/[. ]+$/g, "");
-  return `${currentProjectName || "NGR_AssetPilot"}_多工程导出.zip`;
+  const archiveProjectName = sanitizeName(currentWorkProjectName).replace(/[. ]+$/g, "");
+  return `${archiveProjectName || "NGR_AssetPilot"}_多工程导出.zip`;
 }
 
 function findDuplicateExportAsset() {
@@ -174,14 +174,18 @@ function buildAssetPrefix(asset) {
 }
 
 function buildAssetBasePrefix(asset) {
-  if (asset?.customBasePrefix === "__none") return "";
-  const rawPrefix = asset?.customBasePrefix !== "" && asset?.customBasePrefix != null ? asset.customBasePrefix : rules.basePrefix;
-  const prefix = sanitizeName(rawPrefix || "");
-  return ["", "T_UI", "T_UI_Img", "T_UI_Icon"].includes(prefix) ? prefix : defaultRules.basePrefix;
+  if (asset?.customBasePrefix === "__none" || asset?.customBasePrefixId === "builtin:none") return "";
+  if (asset?.customBasePrefixId) return resolveStoredPrefixValue(asset.customBasePrefixId);
+  if (asset?.customBasePrefix !== "" && asset?.customBasePrefix != null) {
+    const entry = ensurePrefixEntryForValue(asset.customBasePrefix);
+    asset.customBasePrefixId = entry.id;
+    return entry.value;
+  }
+  return resolveStoredPrefixValue(rules.basePrefixId || rules.basePrefix);
 }
 
 function buildAssetProjectName(asset) {
-  return sanitizeName(asset?.customProjectName || rules.projectName) || defaultRules.projectName;
+  return sanitizeName(asset?.customProjectName || currentWorkProjectName || "");
 }
 
 function buildAssetViewName(asset) {
@@ -194,10 +198,12 @@ function getExtension(name) {
 }
 
 function collectRulesForm() {
+  const prefixEntry = getPrefixEntryForValue(els.basePrefix.value);
   return {
     schemeName: els.schemeName.value.trim() || defaultRules.schemeName,
-    basePrefix: sanitizeName(els.workBasePrefix.value || els.basePrefix.value),
-    projectName: sanitizeName(els.workProjectName.value || els.projectName.value) || defaultRules.projectName,
+    basePrefix: prefixEntry.value,
+    basePrefixId: prefixEntry.id,
+    projectName: sanitizeName(els.projectName.value),
     viewName: sanitizeName(els.workViewName.value),
     separator: els.separator.value || defaultRules.separator,
     tags: els.tags.value.trim() || defaultRules.tags,
@@ -216,10 +222,10 @@ function fillRulesForm() {
   els.projectConfigDescription.value = project.description || "";
   els.schemeName.value = rules.schemeName;
   els.basePrefix.value = rules.basePrefix;
-  els.workBasePrefix.value = getPrefixPresetValue(rules.basePrefix) === "__none" ? "" : getPrefixPresetValue(rules.basePrefix) || defaultRules.basePrefix;
-  els.prefixPreset.value = getPrefixPresetValue(rules.basePrefix);
+  if (els.workBasePrefix?.prefixPicker) els.workBasePrefix.value = rules.basePrefixId || getPrefixPresetValue(rules.basePrefix);
+  renderPrefixPresetOptions(rules.basePrefixId || rules.basePrefix);
   els.projectName.value = rules.projectName;
-  els.workProjectName.value = rules.projectName;
+  els.workProjectName.value = currentWorkProjectName;
   els.workViewName.value = rules.viewName || "";
   els.separator.value = rules.separator;
   els.tags.value = rules.tags;
@@ -670,14 +676,15 @@ function syncWorkProjectFields() {
   if (els.projectSelect.value !== activeProjectId) els.projectSelect.value = activeProjectId;
   els.projectConfigName.value = project.name;
   els.projectConfigDescription.value = project.description || "";
-  els.workBasePrefix.value = getPrefixPresetValue(rules.basePrefix) === "__none" ? "" : getPrefixPresetValue(rules.basePrefix) || defaultRules.basePrefix;
-  els.workProjectName.value = rules.projectName;
+  if (els.workBasePrefix?.prefixPicker) els.workBasePrefix.value = rules.basePrefixId || getPrefixPresetValue(rules.basePrefix);
+  els.workProjectName.value = currentWorkProjectName;
   els.workViewName.value = rules.viewName || "";
 }
 
 function buildPrefix() {
   const separator = rules.separator || "_";
-  return [sanitizeName(rules.basePrefix), sanitizeName(rules.projectName), sanitizeName(rules.viewName), ""].filter((part, index, array) => part || index === array.length - 1).join(separator);
+  const parts = [resolveStoredPrefixValue(rules.basePrefixId || rules.basePrefix), sanitizeName(currentWorkProjectName), sanitizeName(rules.viewName)].filter(Boolean);
+  return parts.length ? `${parts.join(separator)}${separator}` : "";
 }
 
 function updateRulePreview() {
@@ -689,9 +696,74 @@ function updateActiveRuleText() {
 }
 
 function getPrefixPresetValue(prefix) {
-  if (!sanitizeName(prefix)) return "__none";
-  const presets = ["T_UI", "T_UI_Img", "T_UI_Icon"];
-  return presets.includes(prefix) ? prefix : "";
+  return getPrefixEntryForValue(prefix).id;
+}
+
+function collectLegacyPrefixValues() {
+  const values = [];
+  const append = (value) => {
+    const clean = NgrPrefixLibrary.sanitizePrefixValue(value);
+    if (clean) values.push(clean);
+  };
+  try { append(JSON.parse(localStorage.getItem(STORAGE_KEY) || "null")?.basePrefix); } catch {}
+  for (const key of [SCHEME_KEY, PROJECTS_KEY]) {
+    try {
+      const payload = JSON.parse(localStorage.getItem(key) || "null");
+      const visit = (value) => {
+        if (!value || typeof value !== "object") return;
+        if (typeof value.basePrefix === "string") append(value.basePrefix);
+        Object.values(value).forEach((child) => {
+          if (child && typeof child === "object") visit(child);
+        });
+      };
+      visit(payload);
+    } catch {}
+  }
+  return values;
+}
+
+function loadPrefixLibrary() {
+  const entries = NgrPrefixLibrary.normalizePrefixLibrary(localStorage.getItem(PREFIX_LIBRARY_KEY), collectLegacyPrefixValues());
+  localStorage.setItem(PREFIX_LIBRARY_KEY, JSON.stringify({ schemaVersion: 1, entries }));
+  return entries;
+}
+
+function savePrefixLibrary() {
+  prefixLibrary = NgrPrefixLibrary.normalizePrefixLibrary({ entries: prefixLibrary });
+  localStorage.setItem(PREFIX_LIBRARY_KEY, JSON.stringify({ schemaVersion: 1, entries: prefixLibrary }));
+}
+
+function getPrefixEntryForValue(idOrValue) {
+  const existing = NgrPrefixLibrary.getPrefixEntry(prefixLibrary, idOrValue);
+  if (existing) return existing;
+  const entry = NgrPrefixLibrary.ensurePrefixEntry(prefixLibrary, idOrValue);
+  savePrefixLibrary();
+  return entry;
+}
+
+function ensurePrefixEntryForValue(value) {
+  return getPrefixEntryForValue(value);
+}
+
+function resolveStoredPrefixValue(idOrValue) {
+  return NgrPrefixLibrary.resolvePrefixValue(prefixLibrary, idOrValue);
+}
+
+function renderPrefixPresetOptions(selected = rules?.basePrefixId || rules?.basePrefix) {
+  if (!els.prefixPreset) return;
+  const selectedEntry = getPrefixEntryForValue(selected);
+  els.prefixPreset.innerHTML = "";
+  prefixLibrary.forEach((entry) => {
+    const option = document.createElement("option");
+    option.value = entry.id;
+    option.textContent = entry.label;
+    option.selected = entry.id === selectedEntry.id;
+    els.prefixPreset.appendChild(option);
+  });
+  const manage = document.createElement("option");
+  manage.value = "__manage";
+  manage.textContent = "＋ 新建/编辑前缀…";
+  els.prefixPreset.appendChild(manage);
 }
 
 function parseTags(value) {
@@ -729,6 +801,9 @@ function loadRules() {
 }
 
 function saveRules(nextRules) {
+  const entry = getPrefixEntryForValue(nextRules.basePrefixId || nextRules.basePrefix);
+  nextRules.basePrefixId = entry.id;
+  nextRules.basePrefix = entry.value;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(nextRules));
 }
 
@@ -1210,6 +1285,9 @@ function upsertScheme(nextRules, shouldSave = true) {
 
 function normalizeLoadedRules(nextRules) {
   const merged = { ...defaultRules, ...nextRules };
+  const prefixEntry = getPrefixEntryForValue(merged.basePrefixId || merged.basePrefix);
+  merged.basePrefixId = prefixEntry.id;
+  merged.basePrefix = prefixEntry.value;
   merged.filenameRules = mergeRuleText(defaultRules.filenameRules, merged.filenameRules);
   merged.filenameRules = enforceNamingRuleAliases(merged.filenameRules);
   return merged;

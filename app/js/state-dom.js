@@ -5,6 +5,8 @@ let schemes;
 let rules;
 let aiSettings;
 let translationSettings;
+let prefixLibrary;
+let currentWorkProjectName;
 let assets;
 let namingSessions;
 let activeNamingSessionId;
@@ -38,6 +40,8 @@ let pendingMeaningNames;
 let translatorDragState;
 
 function bootstrapState() {
+  prefixLibrary = loadPrefixLibrary();
+  currentWorkProjectName = "";
   projects = loadProjects();
   activeProjectId = loadActiveProjectId(projects);
   schemes = getActiveProject().schemes;
@@ -86,12 +90,17 @@ const els = {
     work: document.querySelector("#workView"),
     detect: document.querySelector("#detectView"),
     detectionSettings: document.querySelector("#detectionSettingsView"),
+    localImageSearch: document.querySelector("#localImageSearchView"),
+    generalSettings: document.querySelector("#generalSettingsView"),
+    localImageSearchSettings: document.querySelector("#localImageSearchSettingsView"),
   },
   rulesEntry: document.querySelector("#rulesEntry"),
+  updateAvailableButton: document.querySelector("#updateAvailableButton"),
   tutorialEntry: document.querySelector("#tutorialEntry"),
   guideEntry: document.querySelector("#guideEntry"),
   workEntry: document.querySelector("#workEntry"),
   detectEntry: document.querySelector("#detectEntry"),
+  localImageSearchEntry: document.querySelector("#localImageSearchEntry"),
   projectSelect: document.querySelector("#projectSelect"),
   projectConfigName: document.querySelector("#projectConfigName"),
   projectConfigDescription: document.querySelector("#projectConfigDescription"),
@@ -100,6 +109,11 @@ const els = {
   schemeName: document.querySelector("#schemeName"),
   basePrefix: document.querySelector("#basePrefix"),
   prefixPreset: document.querySelector("#prefixPreset"),
+  prefixLibraryOverlay: document.querySelector("#prefixLibraryOverlay"),
+  prefixLibraryList: document.querySelector("#prefixLibraryList"),
+  prefixLibraryNewValue: document.querySelector("#prefixLibraryNewValue"),
+  prefixLibraryAdd: document.querySelector("#prefixLibraryAdd"),
+  prefixLibraryClose: document.querySelector("#prefixLibraryClose"),
   projectName: document.querySelector("#projectName"),
   workBasePrefix: document.querySelector("#workBasePrefix"),
   workProjectName: document.querySelector("#workProjectName"),
@@ -236,8 +250,6 @@ const els = {
   tutorialPrev: document.querySelector("#tutorialPrev"),
   tutorialNext: document.querySelector("#tutorialNext"),
   tutorialClose: document.querySelector("#tutorialClose"),
-  testBuildBanner: document.querySelector("#testBuildBanner"),
-  testBuildBadge: document.querySelector("#testBuildBadge"),
   workspaceMigrationCard: document.querySelector("#workspaceMigrationCard"),
   workspaceMigrationIntro: document.querySelector("#workspaceMigrationIntro"),
   exportWorkspaceBackup: document.querySelector("#exportWorkspaceBackup"),
@@ -246,5 +258,25 @@ const els = {
   includeBackupSecrets: document.querySelector("#includeBackupSecrets"),
   workspaceBackupPassword: document.querySelector("#workspaceBackupPassword"),
   workspaceMigrationStatus: document.querySelector("#workspaceMigrationStatus"),
+  generalSettingsMigrationSlot: document.querySelector("#generalSettingsMigrationSlot"),
+  localSearchSettingsSlot: document.querySelector("#localSearchSettingsSlot"),
+  localSearchSidebar: document.querySelector(".local-search-sidebar"),
+  currentAppVersion: document.querySelector("#currentAppVersion"),
+  manualUpdateStatus: document.querySelector("#manualUpdateStatus"),
+  manualUpdateCheck: document.querySelector("#manualUpdateCheck"),
+  websiteDownloadLink: document.querySelector("#websiteDownloadLink"),
+  historyDownloadLink: document.querySelector("#historyDownloadLink"),
+  updateDialogOverlay: document.querySelector("#updateDialogOverlay"),
+  updateDialogClose: document.querySelector("#updateDialogClose"),
+  updateCurrentVersion: document.querySelector("#updateCurrentVersion"),
+  updateLatestVersion: document.querySelector("#updateLatestVersion"),
+  updateDownloadSize: document.querySelector("#updateDownloadSize"),
+  updateReleaseDate: document.querySelector("#updateReleaseDate"),
+  updateReleaseNotes: document.querySelector("#updateReleaseNotes"),
+  updateProgressWrap: document.querySelector("#updateProgressWrap"),
+  updateProgress: document.querySelector("#updateProgress"),
+  updateProgressText: document.querySelector("#updateProgressText"),
+  updatePrimaryAction: document.querySelector("#updatePrimaryAction"),
+  updateWebsiteAction: document.querySelector("#updateWebsiteAction"),
   toast: document.querySelector("#toast"),
 };

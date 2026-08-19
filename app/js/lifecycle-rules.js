@@ -1,5 +1,9 @@
-/* NGR AssetPilot V2.25 module: lifecycle-rules.js */
+/* NGR AssetPilot V3.0.0 module: lifecycle-rules.js */
+let currentViewName = "home";
+let settingsReturnView = "home";
 function init() {
+  initializeFeatureSettingsLayout();
+  bindPrefixLibraryControls();
   bindNavigation();
   bindRules();
   bindUploads();
@@ -24,6 +28,184 @@ function init() {
   updateActiveRuleText();
   renderAssetList();
   initializeWorkspaceMigration();
+  void initLocalImageSearch();
+  void window.initializeUpdates();
+}
+
+function initializeFeatureSettingsLayout() {
+  if (els.generalSettingsMigrationSlot && els.workspaceMigrationCard) {
+    els.generalSettingsMigrationSlot.appendChild(els.workspaceMigrationCard);
+  }
+  if (els.localSearchSettingsSlot && els.localSearchSidebar) {
+    els.localSearchSettingsSlot.appendChild(els.localSearchSidebar);
+  }
+}
+
+function bindPrefixLibraryControls() {
+  NgrPrefixLibrary.mountPrefixPicker(els.workBasePrefix, {
+    value: rules.basePrefixId || rules.basePrefix,
+    onChange(prefixId, prefixValue) {
+      rules.basePrefixId = prefixId;
+      rules.basePrefix = prefixValue;
+      els.basePrefix.value = prefixValue;
+      renderPrefixPresetOptions(prefixId);
+      saveRules(rules);
+      updateRulePreview();
+      updateActiveRuleText();
+      renderAssetList();
+      syncSessionNamingParams();
+    },
+  });
+  renderPrefixPresetOptions(rules.basePrefixId || rules.basePrefix);
+  els.prefixLibraryClose?.addEventListener("click", closePrefixLibraryEditor);
+  els.prefixLibraryOverlay?.addEventListener("click", (event) => {
+    if (event.target === els.prefixLibraryOverlay) closePrefixLibraryEditor();
+  });
+  els.prefixLibraryAdd?.addEventListener("click", addCustomPrefixFromEditor);
+  els.prefixLibraryNewValue?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") addCustomPrefixFromEditor();
+  });
+}
+
+function openPrefixLibraryEditor() {
+  renderPrefixLibraryEditor();
+  els.prefixLibraryOverlay.classList.remove("hidden");
+  els.prefixLibraryOverlay.setAttribute("aria-hidden", "false");
+  window.setTimeout(() => els.prefixLibraryNewValue?.focus(), 0);
+}
+
+function closePrefixLibraryEditor() {
+  els.prefixLibraryOverlay?.classList.add("hidden");
+  els.prefixLibraryOverlay?.setAttribute("aria-hidden", "true");
+}
+
+function addCustomPrefixFromEditor() {
+  const value = NgrPrefixLibrary.sanitizePrefixValue(els.prefixLibraryNewValue?.value);
+  if (!value) return showToast("请输入有效的前缀名称");
+  if (NgrPrefixLibrary.getPrefixEntry(prefixLibrary, value)) return showToast("该前缀已经存在");
+  prefixLibrary.push({ id: NgrPrefixLibrary.createCustomId(), value, label: value, builtin: false });
+  els.prefixLibraryNewValue.value = "";
+  commitPrefixLibraryChange();
+  renderPrefixLibraryEditor();
+  showToast("已新增前缀：" + value);
+}
+
+function renderPrefixLibraryEditor() {
+  if (!els.prefixLibraryList) return;
+  els.prefixLibraryList.innerHTML = "";
+  prefixLibrary.forEach((entry) => {
+    const row = document.createElement("div");
+    row.className = `prefix-library-row${entry.builtin ? " is-builtin" : ""}`;
+    const badge = document.createElement("span");
+    badge.className = "prefix-library-kind";
+    badge.textContent = entry.builtin ? "内置" : "自定义";
+    const input = document.createElement("input");
+    input.type = "text";
+    input.maxLength = 64;
+    input.value = entry.label;
+    input.disabled = entry.builtin;
+    row.append(badge, input);
+    if (!entry.builtin) {
+      const customEntries = prefixLibrary.filter((item) => !item.builtin);
+      const customIndex = customEntries.findIndex((item) => item.id === entry.id);
+      input.addEventListener("change", () => {
+        const nextValue = NgrPrefixLibrary.sanitizePrefixValue(input.value);
+        const duplicate = prefixLibrary.some((item) => item.id !== entry.id && item.value.toLocaleLowerCase("en-US") === nextValue.toLocaleLowerCase("en-US"));
+        if (!nextValue || duplicate) {
+          input.value = entry.value;
+          showToast(!nextValue ? "前缀不能为空" : "该前缀已经存在");
+          return;
+        }
+        entry.value = nextValue;
+        entry.label = nextValue;
+        commitPrefixLibraryChange();
+        showToast("前缀已更新");
+      });
+      const actions = document.createElement("div");
+      actions.className = "prefix-library-row-actions";
+      const up = document.createElement("button");
+      up.type = "button";
+      up.className = "ghost-action";
+      up.textContent = "↑";
+      up.title = "上移";
+      up.disabled = customIndex === 0;
+      up.addEventListener("click", () => moveCustomPrefix(entry.id, -1));
+      const down = document.createElement("button");
+      down.type = "button";
+      down.className = "ghost-action";
+      down.textContent = "↓";
+      down.title = "下移";
+      down.disabled = customIndex === customEntries.length - 1;
+      down.addEventListener("click", () => moveCustomPrefix(entry.id, 1));
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "danger-action";
+      remove.textContent = "删除";
+      remove.addEventListener("click", () => deleteCustomPrefix(entry));
+      actions.append(up, down, remove);
+      row.appendChild(actions);
+    }
+    els.prefixLibraryList.appendChild(row);
+  });
+}
+
+function moveCustomPrefix(prefixId, direction) {
+  const builtins = prefixLibrary.filter((entry) => entry.builtin);
+  const customs = prefixLibrary.filter((entry) => !entry.builtin);
+  const index = customs.findIndex((entry) => entry.id === prefixId);
+  const target = index + direction;
+  if (index < 0 || target < 0 || target >= customs.length) return;
+  [customs[index], customs[target]] = [customs[target], customs[index]];
+  prefixLibrary = [...builtins, ...customs];
+  commitPrefixLibraryChange();
+  renderPrefixLibraryEditor();
+}
+
+function deleteCustomPrefix(entry) {
+  if (!window.confirm(`删除前缀“${entry.value}”后，使用它的位置会改为“无”。是否继续？`)) return;
+  prefixLibrary = prefixLibrary.filter((item) => item.id !== entry.id);
+  commitPrefixLibraryChange(entry.id, entry.value);
+  renderPrefixLibraryEditor();
+  showToast("已删除前缀：" + entry.value);
+}
+
+function commitPrefixLibraryChange(deletedId = "", deletedValue = "") {
+  savePrefixLibrary();
+  const syncRule = (target) => {
+    if (!target || typeof target !== "object") return;
+    const requested = target.basePrefixId || target.basePrefix;
+    const deletedReference = deletedId && (requested === deletedId || (!target.basePrefixId && target.basePrefix === deletedValue));
+    const entry = deletedReference
+      ? NgrPrefixLibrary.getPrefixEntry(prefixLibrary, "builtin:none")
+      : NgrPrefixLibrary.getPrefixEntry(prefixLibrary, requested) || getPrefixEntryForValue(target.basePrefix);
+    target.basePrefixId = entry.id;
+    target.basePrefix = entry.value;
+  };
+  syncRule(rules);
+  projects.forEach((project) => project.schemes?.forEach(syncRule));
+  namingSessions.forEach((session) => {
+    syncRule(session.params);
+    (session.assets || []).forEach((asset) => {
+      const deletedLegacyReference = !asset.customBasePrefixId && asset.customBasePrefix === deletedValue;
+      if (!asset.customBasePrefixId && !deletedLegacyReference) return;
+      if (deletedLegacyReference || asset.customBasePrefixId === deletedId || !NgrPrefixLibrary.getPrefixEntry(prefixLibrary, asset.customBasePrefixId)) {
+        asset.customBasePrefixId = "builtin:none";
+        asset.customBasePrefix = "__none";
+        return;
+      }
+      asset.customBasePrefix = resolveStoredPrefixValue(asset.customBasePrefixId);
+    });
+  });
+  saveProjects();
+  saveRules(rules);
+  NgrPrefixLibrary.refreshPrefixPickers();
+  renderPrefixPresetOptions(rules.basePrefixId);
+  if (els.workBasePrefix?.prefixPicker) els.workBasePrefix.value = rules.basePrefixId;
+  els.basePrefix.value = rules.basePrefix;
+  renderAssetList();
+  updateRulePreview();
+  updateActiveRuleText();
+  saveCurrentNamingSession();
 }
 
 function protectEditableShortcuts(root = document) {
@@ -39,12 +221,13 @@ function protectEditableShortcuts(root = document) {
 function bindNavigation() {
   els.tutorialEntry.addEventListener("click", openDetectionTutorial);
   els.guideEntry.addEventListener("click", startGuideTour);
-  els.rulesEntry.addEventListener("click", () => showView("rules"));
+  els.rulesEntry.addEventListener("click", openContextSettings);
   els.workEntry.addEventListener("click", () => showView("work"));
   els.detectEntry.addEventListener("click", () => showView("detect"));
-  els.detectionSettingsEntry?.addEventListener("click", () => showView("detectionSettings"));
+  els.localImageSearchEntry.addEventListener("click", () => showView("localImageSearch"));
+  els.detectionSettingsEntry?.addEventListener("click", () => openSettingsView("detectionSettings", "detect"));
   els.backToDetection.addEventListener("click", () => showView("detect"));
-  els.backButton.addEventListener("click", () => showView("home"));
+  els.backButton.addEventListener("click", navigateBack);
   els.guidePrev.addEventListener("click", () => moveGuideStep(-1));
   els.guideNext.addEventListener("click", () => {
     if (guideStepIndex === guideSteps.length - 1) closeGuideTour();
@@ -70,17 +253,59 @@ function bindNavigation() {
 }
 
 function showView(name) {
+  currentViewName = name;
   Object.entries(els.views).forEach(([key, node]) => node.classList.toggle("active", key === name));
   els.backButton.classList.toggle("hidden", name === "home");
-  els.rulesEntry.classList.toggle("hidden", name === "detect" || name === "detectionSettings");
+  const settingsViews = new Set(["rules", "detectionSettings", "generalSettings", "localImageSearchSettings"]);
+  els.rulesEntry.classList.toggle("hidden", settingsViews.has(name));
+  updateContextSettingsLabel(name);
   const hints = {
     home: "批量整理 UI 切图名称，让文件名保持统一、清楚、可追踪。",
-    rules: "配置全局命名前缀、分隔符与通用标签。工程名可在开始命名页按当前界面填写。",
+    rules: "配置命名规则、AI 接入、方案模板和工作区迁移备份。",
     work: "填写当前界面工程名，上传切图后可在每张图片旁边直接改名。",
     detect: "上传切图文件夹，按项目组规则检测分辨率是否符合规范。",
     detectionSettings: "单独配置 UI 切图检测项目组和分辨率参数。",
+    localImageSearch: "截图粘贴、图片或中英文文字搜索本地相似素材；图片和查询均不上传。",
+    generalSettings: "管理软件版本、官方下载安装入口与工作区迁移备份。",
+    localImageSearchSettings: "管理本地 AI 模型与只读图库索引。",
   };
   els.pageHint.textContent = hints[name];
+  window.syncUpdateButtonVisibility?.();
+}
+
+function openSettingsView(settingsView, returnView = currentViewName) {
+  settingsReturnView = returnView;
+  showView(settingsView);
+}
+
+function openContextSettings() {
+  const targets = {
+    home: "generalSettings",
+    work: "rules",
+    detect: "detectionSettings",
+    localImageSearch: "localImageSearchSettings",
+  };
+  openSettingsView(targets[currentViewName] || "generalSettings", currentViewName);
+}
+
+function navigateBack() {
+  if (["rules", "detectionSettings", "generalSettings", "localImageSearchSettings"].includes(currentViewName)) {
+    showView(settingsReturnView || "home");
+    return;
+  }
+  showView("home");
+}
+
+function updateContextSettingsLabel(viewName) {
+  const labels = {
+    home: "数据与关于设置",
+    work: "命名设置",
+    detect: "UI切图检测设置",
+    localImageSearch: "本地 AI 搜图设置",
+  };
+  const label = labels[viewName] || "设置";
+  els.rulesEntry.setAttribute("aria-label", label);
+  els.rulesEntry.title = label;
 }
 
 const detectionTutorialSlides = Array.from({ length: 10 }, (_, index) => {
@@ -242,15 +467,28 @@ function closeGuideTour() {
 }
 
 function bindRules() {
-  [els.projectConfigName, els.projectConfigDescription, els.schemeName, els.basePrefix, els.projectName, els.separator, els.tags, els.pageTerms, els.componentTerms, els.stateTerms, els.filenameRules, els.contextDocs, els.aiPromptText].forEach((input) => {
+  [els.projectConfigName, els.projectConfigDescription, els.schemeName, els.projectName, els.separator, els.tags, els.pageTerms, els.componentTerms, els.stateTerms, els.filenameRules, els.contextDocs, els.aiPromptText].forEach((input) => {
     input.addEventListener("input", () => {
       rules = collectRulesForm();
-      if (input === els.projectName) els.workProjectName.value = rules.projectName;
       updateRulePreview();
       updateActiveRuleText();
       renderAssetList();
       syncSessionNamingParams();
     });
+  });
+
+  els.basePrefix.addEventListener("change", () => {
+    const entry = getPrefixEntryForValue(els.basePrefix.value);
+    rules.basePrefixId = entry.id;
+    rules.basePrefix = entry.value;
+    els.basePrefix.value = entry.value;
+    renderPrefixPresetOptions(entry.id);
+    if (els.workBasePrefix?.prefixPicker) els.workBasePrefix.value = entry.id;
+    saveRules(rules);
+    updateRulePreview();
+    updateActiveRuleText();
+    renderAssetList();
+    syncSessionNamingParams();
   });
 
   els.projectSelect.addEventListener("change", () => {
@@ -269,22 +507,16 @@ function bindRules() {
   });
 
   els.prefixPreset.addEventListener("change", () => {
-    if (!els.prefixPreset.value) return;
-    const prefixValue = els.prefixPreset.value === "__none" ? "" : els.prefixPreset.value;
-    els.basePrefix.value = prefixValue;
-    els.workBasePrefix.value = prefixValue;
-    rules = collectRulesForm();
-    saveRules(rules);
-    updateRulePreview();
-    updateActiveRuleText();
-    renderAssetList();
-    syncSessionNamingParams();
-  });
-
-  els.workBasePrefix.addEventListener("change", () => {
-    rules.basePrefix = els.workBasePrefix.value;
-    els.basePrefix.value = rules.basePrefix;
-    els.prefixPreset.value = getPrefixPresetValue(rules.basePrefix);
+    if (els.prefixPreset.value === "__manage") {
+      renderPrefixPresetOptions(rules.basePrefixId);
+      openPrefixLibraryEditor();
+      return;
+    }
+    const entry = getPrefixEntryForValue(els.prefixPreset.value);
+    els.basePrefix.value = entry.value;
+    if (els.workBasePrefix?.prefixPicker) els.workBasePrefix.value = entry.id;
+    rules.basePrefixId = entry.id;
+    rules.basePrefix = entry.value;
     saveRules(rules);
     updateRulePreview();
     updateActiveRuleText();
@@ -293,9 +525,7 @@ function bindRules() {
   });
 
   els.workProjectName.addEventListener("input", () => {
-    rules.projectName = sanitizeName(els.workProjectName.value) || defaultRules.projectName;
-    els.projectName.value = rules.projectName;
-    saveRules(rules);
+    currentWorkProjectName = sanitizeName(els.workProjectName.value);
     updateRulePreview();
     updateActiveRuleText();
     renderAssetList();
@@ -352,6 +582,7 @@ function bindRules() {
 
   els.resetRules.addEventListener("click", () => {
     rules = { ...defaultRules };
+    currentWorkProjectName = "";
     saveRules(rules);
     upsertScheme(rules);
     fillRulesForm();
@@ -396,6 +627,7 @@ function switchScheme(schemeName) {
   const selected = schemes.find((scheme) => scheme.schemeName === schemeName);
   if (!selected) return;
   rules = normalizeLoadedRules({ ...defaultRules, ...selected });
+  currentWorkProjectName = "";
   getActiveProject().activeSchemeName = rules.schemeName;
   saveProjects();
   saveRules(rules);
@@ -430,6 +662,7 @@ function createProject() {
   activeProjectId = project.id;
   schemes = project.schemes;
   rules = normalizeLoadedRules({ ...defaultRules, ...schemes[0] });
+  currentWorkProjectName = "";
   saveProjects();
   saveRules(rules);
   fillRulesForm();
@@ -451,6 +684,7 @@ function switchProject(projectId) {
   schemes = nextProject.schemes.length ? nextProject.schemes : [normalizeLoadedRules({ ...defaultRules })];
   nextProject.schemes = schemes;
   rules = normalizeLoadedRules({ ...defaultRules, ...getProjectActiveScheme(nextProject) });
+  currentWorkProjectName = "";
   saveProjects();
   saveRules(rules);
   fillRulesForm();
@@ -482,6 +716,7 @@ function deleteCurrentScheme() {
   const project = getActiveProject();
   project.schemes = schemes;
   rules = normalizeLoadedRules({ ...defaultRules, ...schemes[0] });
+  currentWorkProjectName = "";
   project.activeSchemeName = rules.schemeName;
   saveProjects();
   saveRules(rules);
@@ -505,6 +740,7 @@ function deleteCurrentProject() {
   activeProjectId = projects[0].id;
   schemes = getActiveProject().schemes;
   rules = normalizeLoadedRules({ ...defaultRules, ...schemes[0] });
+  currentWorkProjectName = "";
   saveProjects();
   localStorage.setItem(ACTIVE_PROJECT_KEY, activeProjectId);
   saveRules(rules);

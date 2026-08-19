@@ -2,13 +2,13 @@
 
 正在持续开发中。
 
-NGR AssetPilot｜AI资源领航是一款面向游戏 UI 资源整理流程的网页工具，用来辅助 UI 切图批量命名、规范检测、知识库管理和 AI 命名。
+NGR AssetPilot｜AI资源领航是一款面向游戏 UI 资源整理流程的 Windows 桌面工具，用来辅助 UI 切图批量命名、规范检测、知识库管理和 AI 命名。
 它的目标是减少手动改文件名的重复劳动，让不同项目组可以按自己的命名规范快速处理大量切图资源。
 
 作者：by 五成（月财）  
 合作与反馈：907609732@qq.com  
 GitHub：[907609732/NGR-AI-AutoName-Tool](https://github.com/907609732/NGR-AI-AutoName-Tool.git)
-官网：[ngr-assetpilot.chenyuecai.chatgpt.site](https://ngr-assetpilot.chenyuecai.chatgpt.site)
+官网：[ngr.lttlt.top](https://ngr.lttlt.top)
 
 ## 核心功能
 

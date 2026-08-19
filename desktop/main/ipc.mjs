@@ -14,6 +14,7 @@ export function registerDesktopIpc({
   updater,
   lifecycle,
   environmentInfo,
+  localImageSearch,
 }) {
   const registered = [];
 
@@ -74,6 +75,13 @@ export function registerDesktopIpc({
   handle(channels.updaterCheck, async () => updater.check());
   handle(channels.updaterDownload, async () => updater.download());
   handle(channels.updaterInstall, async () => updater.install());
+  const disposeUpdaterSubscription = typeof updater.subscribe === "function"
+    ? updater.subscribe((state) => {
+        const window = getWindow();
+        if (!window || window.isDestroyed()) return;
+        window.webContents.send(channels.updaterStateChanged, state);
+      })
+    : () => {};
 
   handle(channels.shellOpenExternal, async (_event, payload) => {
     const rawUrl = typeof payload === "string" ? payload : payload?.url;
@@ -83,6 +91,24 @@ export function registerDesktopIpc({
     await shell.openExternal(rawUrl, { activate: true });
     return { opened: true };
   });
+
+  handle(channels.localImageSearchGetModelStatus, async () => localImageSearch.getModelStatus());
+  handle(channels.localImageSearchDownloadModel, async () => localImageSearch.downloadModel());
+  handle(channels.localImageSearchCancelModelDownload, async () => localImageSearch.cancelModelDownload());
+  handle(channels.localImageSearchImportModel, async () => localImageSearch.importModel());
+  handle(channels.localImageSearchExportModel, async () => localImageSearch.exportModel());
+  handle(channels.localImageSearchRemoveModel, async () => localImageSearch.removeModel());
+  handle(channels.localImageSearchListLibraries, async () => localImageSearch.listLibraries());
+  handle(channels.localImageSearchCreateLibrary, async () => localImageSearch.createLibrary());
+  handle(channels.localImageSearchRemoveLibrary, async (_event, payload) => localImageSearch.removeLibrary(payload));
+  handle(channels.localImageSearchStartIndex, async (_event, payload) => localImageSearch.startIndex(payload));
+  handle(channels.localImageSearchGetJobStatus, async (_event, payload) => localImageSearch.getJobStatus(payload));
+  handle(channels.localImageSearchCancelJob, async (_event, payload) => localImageSearch.cancelJob(payload));
+  handle(channels.localImageSearchSearchByImage, async (_event, payload) => localImageSearch.searchByImage(payload));
+  handle(channels.localImageSearchSearchByText, async (_event, payload) => localImageSearch.searchByText(payload));
+  handle(channels.localImageSearchGetThumbnail, async (_event, payload) => localImageSearch.getThumbnail(payload));
+  handle(channels.localImageSearchOpenResult, async (_event, payload) => localImageSearch.openResult(payload));
+  handle(channels.localImageSearchRevealResult, async (_event, payload) => localImageSearch.revealResult(payload));
 
   const readyListener = (event, payload) => {
     try {
@@ -96,6 +122,7 @@ export function registerDesktopIpc({
   ipcMain.on(channels.appReadyToQuit, readyListener);
 
   return () => {
+    disposeUpdaterSubscription();
     for (const channel of registered) ipcMain.removeHandler(channel);
     ipcMain.removeListener(channels.appReadyToQuit, readyListener);
   };

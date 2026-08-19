@@ -1,51 +1,57 @@
 const path = require("node:path");
 
 const projectRoot = path.resolve(__dirname, "..");
-const channel = process.env.NGR_BUILD_CHANNEL === "test" ? "test" : "release";
-const isTest = channel === "test";
-const version = isTest ? "3.0.0-test.1" : "3.0.0";
-const output = path.join(projectRoot, "artifacts", channel);
+const packageJson = require(path.join(projectRoot, "package.json"));
+const edition = process.env.NGR_BUILD_EDITION;
+if (!['dev', 'test'].includes(edition)) throw new Error('NGR_BUILD_EDITION 必须是 dev 或 test');
 
-const applicationFiles = [
-  "desktop/**/*",
-  "app/**/*",
-  "package.json",
-  "LICENSE",
-  "!app/API配置文件/**/*",
-  "!**/*.map",
-  "!**/.DS_Store",
-];
-
-if (isTest) {
-  applicationFiles.push("build/generated/test-secrets-key.mjs");
-} else {
-  applicationFiles.push("!build/generated/**/*", "!desktop/main/test-index.mjs", "!desktop/services/test-secrets.mjs");
-}
+const isTest = edition === 'test';
+const editionLabel = isTest ? 'Test' : 'Dev';
+const productName = `NGR AssetPilot ${editionLabel}`;
+const artifactBase = `NGR-AssetPilot-${editionLabel}-${packageJson.version}`;
 
 module.exports = {
-  appId: isTest ? "com.chenyuecai.ngrassetpilot.test" : "com.chenyuecai.ngrassetpilot",
-  productName: isTest ? "NGR AssetPilot TEST" : "NGR AssetPilot",
-  executableName: isTest ? "NGR AssetPilot TEST" : "NGR AssetPilot",
+  appId: `com.chenyuecai.ngrassetpilot.${edition}`,
+  productName,
+  executableName: productName,
   electronVersion: "43.4.1",
   asar: true,
+  asarUnpack: [
+    "node_modules/onnxruntime-node/bin/**/*",
+    "node_modules/sharp/**/*",
+    "node_modules/@img/**/*",
+  ],
   compression: "maximum",
   npmRebuild: false,
   buildDependenciesFromSource: false,
   removePackageScripts: true,
   extraMetadata: {
-    name: isTest ? "ngr-assetpilot-desktop-test" : "ngr-assetpilot-desktop",
-    version,
+    name: `ngr-assetpilot-${edition}`,
+    version: packageJson.version,
     main: isTest ? "desktop/main/test-index.mjs" : "desktop/main/index.mjs",
   },
   directories: {
     app: projectRoot,
     buildResources: path.join(projectRoot, "build"),
-    output,
+    output: path.join(projectRoot, "artifacts", edition),
   },
-  files: applicationFiles,
-  extraResources: isTest
-    ? [{ from: "build/generated/test-secrets.bin", to: "test-secrets.bin" }]
-    : [],
+  files: [
+    "desktop/**/*",
+    "app/**/*",
+    "package.json",
+    "LICENSE",
+    "THIRD-PARTY-NOTICES.md",
+    "!app/API配置文件/**/*",
+    "!build/generated/**/*",
+    "!desktop/services/test-secrets.mjs",
+    "!node_modules/onnxruntime-web/**/*",
+    "!node_modules/onnxruntime-node/bin/napi-v6/darwin/**/*",
+    "!node_modules/onnxruntime-node/bin/napi-v6/linux/**/*",
+    "!node_modules/onnxruntime-node/bin/napi-v6/win32/arm64/**/*",
+    "!**/*.map",
+    "!**/.DS_Store",
+  ],
+  extraResources: [],
   win: {
     icon: path.join(projectRoot, "build", "icon.ico"),
     target: [
@@ -53,7 +59,7 @@ module.exports = {
       { target: "portable", arch: ["x64"] },
     ],
     verifyUpdateCodeSignature: false,
-    legalTrademarks: "NGR AssetPilot",
+    legalTrademarks: productName,
   },
   nsis: {
     oneClick: false,
@@ -62,21 +68,13 @@ module.exports = {
     allowToChangeInstallationDirectory: true,
     createDesktopShortcut: true,
     createStartMenuShortcut: true,
-    shortcutName: isTest ? "NGR AssetPilot TEST" : "NGR AssetPilot",
+    shortcutName: productName,
     deleteAppDataOnUninstall: false,
-    artifactName: `NGR-AssetPilot-${version}-Setup-x64.\${ext}`,
+    artifactName: `${artifactBase}-Setup-x64.\${ext}`,
   },
   portable: {
-    artifactName: `NGR-AssetPilot-${version}-portable-x64.\${ext}`,
+    artifactName: `${artifactBase}-portable-x64.\${ext}`,
     requestExecutionLevel: "user",
   },
-  publish: isTest
-    ? null
-    : [{
-        provider: "github",
-        owner: "907609732",
-        repo: "NGR-AI-AutoName-Tool",
-        releaseType: "draft",
-        channel: "latest",
-      }],
+  publish: null,
 };

@@ -101,6 +101,8 @@ function initNamingSessions() {
 
 function createNamingSessionRecord(name) {
   const now = Date.now();
+  const params = collectNamingSessionParams();
+  params.projectName = "";
   return {
     id: "naming-session-" + now + "-" + Math.random().toString(16).slice(2),
     name,
@@ -117,7 +119,7 @@ function createNamingSessionRecord(name) {
     albumSettings: normalizeAlbumSettings(albumSettings),
     albumPage: 1,
     albumEditorOpen: false,
-    params: collectNamingSessionParams(),
+    params,
   };
 }
 
@@ -126,7 +128,8 @@ function collectNamingSessionParams() {
     activeProjectId,
     schemeName: rules.schemeName,
     basePrefix: rules.basePrefix,
-    projectName: rules.projectName,
+    basePrefixId: rules.basePrefixId,
+    projectName: sanitizeName(els.workProjectName?.value ?? currentWorkProjectName),
     viewName: rules.viewName || "",
   };
 }
@@ -198,8 +201,10 @@ function applyNamingSessionParams(params) {
   const selectedScheme = schemes.find((scheme) => scheme.schemeName === params.schemeName);
   if (!selectedScheme && params.schemeName) showToast("当前记录的配置方案不存在，已保留当前项目默认方案");
   rules = normalizeLoadedRules({ ...defaultRules, ...(selectedScheme || getProjectActiveScheme(project)) });
-  rules.basePrefix = params.basePrefix ?? rules.basePrefix;
-  rules.projectName = params.projectName || rules.projectName || defaultRules.projectName;
+  const prefixEntry = getPrefixEntryForValue(params.basePrefixId || params.basePrefix || rules.basePrefixId || rules.basePrefix);
+  rules.basePrefixId = prefixEntry.id;
+  rules.basePrefix = prefixEntry.value;
+  currentWorkProjectName = sanitizeName(params.projectName || "");
   rules.viewName = params.viewName || "";
   project.activeSchemeName = rules.schemeName;
   saveProjects();
@@ -207,6 +212,7 @@ function applyNamingSessionParams(params) {
   fillRulesForm();
   renderProjectSelect();
   renderSchemeSelect();
+  syncWorkProjectFields();
   updateRulePreview();
   updateActiveRuleText();
 }
@@ -220,7 +226,7 @@ function createNamingSession() {
 }
 
 function makeDefaultNamingSessionName() {
-  const projectName = sanitizeName(els.workProjectName.value || rules.projectName);
+  const projectName = sanitizeName(els.workProjectName.value || currentWorkProjectName);
   const viewName = sanitizeName(els.workViewName.value || rules.viewName);
   const baseName = projectName && viewName ? projectName + "_" + viewName : "";
   if (baseName && !namingSessions.some((session) => session.name === baseName)) return baseName;

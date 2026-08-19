@@ -56,6 +56,23 @@ const context = {
     viewName: "Home",
     separator: "_",
   },
+  currentWorkProjectName: "DefaultProject",
+  prefixLibrary: [
+    { id: "builtin:none", value: "", label: "无", builtin: true },
+    { id: "builtin:t-ui", value: "T_UI", label: "T_UI", builtin: true },
+    { id: "builtin:t-ui-icon", value: "T_UI_Icon", label: "T_UI_Icon", builtin: true },
+  ],
+  NgrPrefixLibrary: {
+    sanitizePrefixValue: (value) => String(value || ""),
+    normalizePrefixLibrary: (value) => value?.entries || value || [],
+    getPrefixEntry: (entries, idOrValue) => entries.find((entry) => entry.id === idOrValue || entry.value === idOrValue) || (idOrValue === "__none" ? entries[0] : null),
+    ensurePrefixEntry(entries, value) {
+      const entry = { id: `custom:${value}`, value, label: value, builtin: false };
+      entries.push(entry);
+      return entry;
+    },
+    resolvePrefixValue: (entries, idOrValue) => entries.find((entry) => entry.id === idOrValue || entry.value === idOrValue)?.value || "",
+  },
   sanitizeName: (value) => String(value || "")
     .trim()
     .replace(/[\\/:*?"<>|]/g, "_")

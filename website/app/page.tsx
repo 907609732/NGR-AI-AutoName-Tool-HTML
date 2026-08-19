@@ -1,7 +1,8 @@
 import { MotionController } from "./motion";
+import { getDesktopRelease } from "../lib/desktop-release.mjs";
 
 const githubUrl = "https://github.com/907609732/NGR-AI-AutoName-Tool";
-const releasesUrl = `${githubUrl}/releases`;
+const candidateVersion = "3.0.0";
 
 const features = [
   {
@@ -27,7 +28,7 @@ const features = [
   {
     code: "LC",
     title: "本地优先工作流",
-    description: "核心整理、知识库与检测流程都可在浏览器本地运行，重要资源始终由你掌控。",
+    description: "核心整理、知识库与检测流程都在 Windows 桌面端运行，重要资源始终由你掌控。",
   },
   {
     code: "TM",
@@ -50,7 +51,7 @@ const steps = [
   {
     number: "03",
     title: "检测与交付",
-    description: "完成规范检测后批量下载，让资源以统一命名进入项目。",
+    description: "完成规范检测后直接导出到本机目录，让资源以统一命名进入项目。",
   },
 ];
 
@@ -65,6 +66,9 @@ function LogoMark({ compact = false }: { compact?: boolean }) {
 }
 
 export default function Home() {
+  const desktopRelease = getDesktopRelease();
+  const displayVersion = desktopRelease?.version ?? candidateVersion;
+
   return (
     <main>
       <MotionController />
@@ -81,31 +85,39 @@ export default function Home() {
           <a href="#workflow">使用流程</a>
           <a href="#security">安全说明</a>
         </nav>
-        <a className="header-cta" href={releasesUrl} target="_blank" rel="noreferrer">
-          Windows 版下载
-        </a>
+        {desktopRelease ? (
+          <a className="header-cta" href={desktopRelease.url}>
+            下载 Windows 版
+          </a>
+        ) : (
+          <span className="header-cta is-disabled" aria-disabled="true">Windows 版准备中</span>
+        )}
       </header>
 
       <section className="hero" id="top">
         <div className="hero-glow hero-glow-one" />
         <div className="hero-glow hero-glow-two" />
         <div className="hero-copy">
-          <div className="eyebrow"><span /> V3.0.0 · Windows 桌面工作台</div>
+          <div className="eyebrow"><span /> V{displayVersion} · Windows 桌面版</div>
           <h1>让每一张 UI 资源，<br /><em>驶向正确的名字。</em></h1>
           <p>
-            NGR AssetPilot 将 AI 命名、团队知识库、规范检测和批量导出放进一个本地工作流，
+            NGR AssetPilot 将 AI 命名、团队知识库、规范检测和批量导出放进一个 Windows 桌面工作流，
             帮助美术与项目组更快整理资源、更少出错。
           </p>
           <div className="hero-actions">
-            <a className="primary-button" href={releasesUrl} target="_blank" rel="noreferrer">
-              查看 Windows 发布版 <span aria-hidden="true">↗</span>
-            </a>
+            {desktopRelease ? (
+              <a className="primary-button" href={desktopRelease.url}>
+                下载 Windows 版 <span aria-hidden="true">↓</span>
+              </a>
+            ) : (
+              <span className="primary-button is-disabled" aria-disabled="true">Windows 版准备中</span>
+            )}
             <a className="secondary-button" href="#features">查看核心能力</a>
           </div>
           <ul className="hero-notes" aria-label="产品特性">
-            <li><span>✓</span> 本地优先</li>
+            <li><span>✓</span> Windows 10/11 x64</li>
             <li><span>✓</span> 批量处理</li>
-            <li><span>✓</span> 团队规则可配置</li>
+            <li><span>✓</span> 安装包不内置平台凭据</li>
           </ul>
         </div>
 
@@ -214,10 +226,10 @@ export default function Home() {
         <div className="security-copy">
           <span className="section-label">LOCAL FIRST</span>
           <h2>资源留在本地，<br />能力由你选择</h2>
-          <p>图片尺寸、规范和相似度检测在浏览器本地完成。只有在你主动配置并运行视觉 AI 时，才会调用对应服务。</p>
+          <p>图片尺寸、规范和相似度检测在电脑本地完成。只有在你主动配置并运行视觉 AI 时，才会调用对应服务。</p>
           <ul>
             <li><span>01</span><div><strong>无需上传服务器</strong><small>基础命名、知识库和检测可本地运行</small></div></li>
-            <li><span>02</span><div><strong>API 配置由你管理</strong><small>服务类型、接口地址与模型均可自行选择</small></div></li>
+            <li><span>02</span><div><strong>API 配置由你管理</strong><small>软件不内置平台凭据，由用户在软件内自行配置</small></div></li>
             <li><span>03</span><div><strong>导出不重编码</strong><small>保留原始图片内容，只更新文件名称</small></div></li>
           </ul>
         </div>
@@ -227,17 +239,33 @@ export default function Home() {
         <div className="download-logo"><LogoMark /></div>
         <span className="section-label light">READY TO START</span>
         <h2>让资源管理，从名字开始变简单。</h2>
-        <p>V3.0.0 提供 Windows 10/11 x64 安装版与便携版。正式发布物、SHA-256 与版本说明会统一展示在 GitHub Releases，不提供尚未生成的占位下载直链。</p>
-        <a className="primary-button lime" href={releasesUrl} target="_blank" rel="noreferrer">
-          查看 GitHub Releases <span aria-hidden="true">↗</span>
-        </a>
-        <small>当前版本 V3.0.0 · Windows 10/11 x64 · 安装版与便携版</small>
+        {desktopRelease ? (
+          <>
+            <p>该版本已确认不含内置平台凭据，并完成安装包链接与 SHA-256 校验。点击按钮直接获取 Windows x64 Setup EXE。</p>
+            <a className="primary-button lime" href={desktopRelease.url}>
+              下载 {desktopRelease.filename} <span aria-hidden="true">↓</span>
+            </a>
+            <small>当前版本 V{desktopRelease.version} · Windows 10/11 x64 · 当前未签名，Windows 可能显示未知发布者提示</small>
+            <code className="release-sha">SHA-256: {desktopRelease.sha256}</code>
+          </>
+        ) : (
+          <>
+            <p>Windows 版正在完成安装包扫描、上传和下载链接验证。全部通过前，官网不会提供无效或不安全的下载直链。</p>
+            <span className="primary-button lime is-disabled" aria-disabled="true">Windows 版准备中</span>
+            <small>当前版本 V{candidateVersion} · 下载包不包含内置平台凭据</small>
+          </>
+        )}
       </section>
 
       <footer>
         <div className="footer-brand"><LogoMark compact /><div><strong>NGR AssetPilot</strong><small>AI资源领航</small></div></div>
         <p>面向游戏 UI 资源整理流程的本地 AI 工作台。</p>
         <div className="footer-links">
+          {desktopRelease ? (
+            <a href={desktopRelease.url}>下载 Windows 版</a>
+          ) : (
+            <span aria-disabled="true">Windows 版准备中</span>
+          )}
           <a href={githubUrl} target="_blank" rel="noreferrer">GitHub</a>
           <a href="mailto:907609732@qq.com">联系作者</a>
         </div>

@@ -99,27 +99,20 @@ function renderAssetList() {
     prefix.className = "inline-prefix inline-prefix-choice";
     const prefixLabel = document.createElement("span");
     prefixLabel.textContent = "前缀名";
-    const prefixInput = document.createElement("select");
-    [
-      { value: "", label: "无" },
-      { value: "T_UI", label: "T_UI" },
-      { value: "T_UI_Img", label: "T_UI_Img" },
-      { value: "T_UI_Icon", label: "T_UI_Icon" },
-    ].forEach((item) => {
-      const option = document.createElement("option");
-      option.value = item.value;
-      option.textContent = item.label;
-      option.selected = item.value === buildAssetBasePrefix(asset);
-      prefixInput.appendChild(option);
-    });
-    prefixInput.addEventListener("change", () => {
+    const currentPrefixEntry = getPrefixEntryForValue(asset.customBasePrefixId || asset.customBasePrefix || buildAssetBasePrefix(asset));
+    const prefixPicker = NgrPrefixLibrary.createPrefixPicker({
+      value: currentPrefixEntry.id,
+      className: "inline-prefix-picker",
+      onChange(prefixId, prefixValue) {
       asset.customPrefix = "";
-      asset.customBasePrefix = prefixInput.value === "" ? "__none" : prefixInput.value;
+      asset.customBasePrefixId = prefixId;
+      asset.customBasePrefix = prefixId === "builtin:none" ? "__none" : prefixValue;
       afterName.querySelector("strong").textContent = asset.finalBaseName ? buildExportName(asset) : "待命名";
       saveCurrentNamingSession();
       syncDuplicateNameIndicators();
+      },
     });
-    prefix.append(prefixLabel, prefixInput);
+    prefix.append(prefixLabel, prefixPicker.root);
 
     const project = document.createElement("label");
     project.className = "inline-prefix";
@@ -128,7 +121,7 @@ function renderAssetList() {
     const projectInput = document.createElement("input");
     projectInput.type = "text";
     projectInput.value = buildAssetProjectName(asset);
-    projectInput.placeholder = rules.projectName;
+    projectInput.placeholder = "可不填";
     projectInput.addEventListener("input", () => {
       asset.customPrefix = "";
       asset.customProjectName = sanitizeName(projectInput.value);
@@ -475,17 +468,13 @@ function createAlbumNamingEditor(asset, outputNode) {
   };
   const fields = document.createElement("div");
   fields.className = "album-editor-fields";
-  const prefix = createAlbumEditorSelect("前缀名", [
-    { value: "", label: "无" },
-    { value: "T_UI", label: "T_UI" },
-    { value: "T_UI_Img", label: "T_UI_Img" },
-    { value: "T_UI_Icon", label: "T_UI_Icon" },
-  ], buildAssetBasePrefix(asset), (value) => {
+  const prefix = createAlbumPrefixPicker("前缀名", asset.customBasePrefixId || asset.customBasePrefix || buildAssetBasePrefix(asset), (prefixId, prefixValue) => {
     asset.customPrefix = "";
-    asset.customBasePrefix = value === "" ? "__none" : value;
+    asset.customBasePrefixId = prefixId;
+    asset.customBasePrefix = prefixId === "builtin:none" ? "__none" : prefixValue;
     updateOutput();
   });
-  const project = createAlbumEditorInput("工程名", buildAssetProjectName(asset), rules.projectName, (value) => {
+  const project = createAlbumEditorInput("工程名", buildAssetProjectName(asset), "可不填", (value) => {
     asset.customPrefix = "";
     asset.customProjectName = sanitizeName(value);
     updateOutput();
@@ -617,6 +606,20 @@ function createAlbumEditorSelect(labelText, items, value, onChange) {
   });
   select.addEventListener("change", () => onChange(select.value));
   label.append(span, select);
+  return label;
+}
+
+function createAlbumPrefixPicker(labelText, value, onChange) {
+  const label = document.createElement("label");
+  const span = document.createElement("span");
+  span.textContent = labelText;
+  const entry = getPrefixEntryForValue(value);
+  const picker = NgrPrefixLibrary.createPrefixPicker({
+    value: entry.id,
+    className: "album-prefix-picker",
+    onChange,
+  });
+  label.append(span, picker.root);
   return label;
 }
 

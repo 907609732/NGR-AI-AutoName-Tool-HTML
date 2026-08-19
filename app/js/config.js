@@ -11,6 +11,7 @@ const DETECTION_PROFILES_KEY = "ngr-ai-autoname-detection-profiles";
 const ACTIVE_DETECTION_PROFILE_KEY = "ngr-ai-autoname-active-detection-profile";
 const LIST_DISPLAY_MODE_KEY = "ngr-ai-autoname-list-display-mode";
 const LIST_SORT_MODE_KEY = "ngr-ai-autoname-list-sort-mode";
+const PREFIX_LIBRARY_KEY = "ngr-assetpilot-prefix-library-v1";
 const NAMING_WORKSPACE_DB_NAME = "ngr-assetpilot-naming-workspace";
 const NAMING_WORKSPACE_DB_VERSION = 1;
 const NAMING_WORKSPACE_KEY = "default";
@@ -28,6 +29,7 @@ const APP_STORAGE_KEYS = [
   ACTIVE_DETECTION_PROFILE_KEY,
   LIST_DISPLAY_MODE_KEY,
   LIST_SORT_MODE_KEY,
+  PREFIX_LIBRARY_KEY,
   MEANING_CACHE_KEY,
 ];
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"];

@@ -8,9 +8,6 @@
   </head>
   <body>
     <div id="app">
-      <div class="test-build-banner hidden" id="testBuildBanner" role="status">
-        TEST BUILD · 内部测试版本含可逆混淆凭据，不得公开分发
-      </div>
       <header class="topbar">
         <button class="back-button hidden" id="backButton" type="button" aria-label="返回主界面">←</button>
         <div class="brand-lockup">
@@ -18,13 +15,14 @@
             <span class="brand-logo-core"></span>
           </div>
           <div class="topbar-title">
-            <h1><span class="brand-en">NGR AssetPilot</span><span class="brand-divider">｜</span><span class="brand-cn">AI资源领航</span> <span class="version-badge">V3.0.0</span> <span class="test-build-badge hidden" id="testBuildBadge">TEST BUILD</span></h1>
+            <h1><span class="brand-en">NGR AssetPilot</span><span class="brand-divider">｜</span><span class="brand-cn">AI资源领航</span> <span class="version-badge">V3.0.0</span><span class="edition-badge hidden" id="editionBadge"></span></h1>
             <p id="pageHint">批量整理 UI 切图名称，让文件名保持统一、清楚、可追踪。</p>
           </div>
         </div>
         <button class="settings-button tutorial-button" id="tutorialEntry" type="button" aria-label="UI切图检测教程" title="UI切图检测教程">教程</button>
         <button class="settings-button guide-button" id="guideEntry" type="button" aria-label="操作指引" title="操作指引">?</button>
-        <button class="settings-button" id="rulesEntry" type="button" aria-label="命名规则设置" title="命名规则设置">⚙</button>
+        <button class="update-available-button hidden" id="updateAvailableButton" type="button">发现新版本</button>
+        <button class="settings-button" id="rulesEntry" type="button" aria-label="设置" title="设置">⚙</button>
       </header>
 
       <main>
@@ -37,39 +35,156 @@
             <span>UI切图检测</span>
             <small>上传文件夹后检测分辨率、背景图、大图和图集规范</small>
           </button>
-          <section class="workspace-migration-card" id="workspaceMigrationCard" aria-labelledby="workspaceMigrationTitle">
-            <div class="workspace-migration-copy">
-              <h2 id="workspaceMigrationTitle">工作区迁移与备份</h2>
-              <p id="workspaceMigrationIntro">导出或导入 .ngrap 迁移包，保留设置、命名进度、切图和参考图。</p>
-            </div>
-            <label class="workspace-secret-option">
-              <input id="includeBackupSecrets" type="checkbox" />
-              <span>导出时携带加密凭据</span>
-            </label>
-            <label class="workspace-password-field">
-              <span>迁移密码</span>
-              <input id="workspaceBackupPassword" type="password" minlength="12" autocomplete="new-password" placeholder="导入加密迁移包时填写密码" />
-            </label>
-            <div class="workspace-migration-actions">
-              <button id="exportWorkspaceBackup" class="ghost-action" type="button">导出 .ngrap</button>
-              <button id="importWorkspaceBackup" class="primary-action" type="button">导入 .ngrap</button>
-              <input id="workspaceBackupInput" class="hidden" type="file" accept=".ngrap,application/zip,application/vnd.ngr.assetpilot+zip" />
-            </div>
-            <p class="workspace-migration-note">凭据仅在勾选后写入迁移包，并使用 PBKDF2-SHA256（600,000 次）与 AES-256-GCM 加密。请妥善保存密码。</p>
-            <p class="workspace-migration-status" id="workspaceMigrationStatus" aria-live="polite">导入前会自动生成一份当前工作区备份。</p>
-          </section>
+          <button class="entry-button local-search-entry" id="localImageSearchEntry" type="button">
+            <span>本地 AI 搜图</span>
+            <small>截图粘贴、图片或中英文文字搜索本地相似素材</small>
+          </button>
           <div class="signature">
             <span>by五成（月财）</span>
             <a href="https://github.com/907609732/NGR-AI-AutoName-Tool.git" target="_blank" rel="noreferrer">GitHub：907609732/NGR-AI-AutoName-Tool</a>
-            <a href="https://ngr-assetpilot.chenyuecai.chatgpt.site" target="_blank" rel="noreferrer">官网：ngr-assetpilot.chenyuecai.chatgpt.site</a>
+            <a href="https://ngr.lttlt.top" target="_blank" rel="noreferrer">官网：ngr.lttlt.top</a>
             <p>若有合作意向或意见建议，可发送邮件至 907609732@qq.com，也欢迎前往 GitHub 提交反馈。</p>
+          </div>
+        </section>
+
+        <section class="view general-settings-view" id="generalSettingsView">
+          <div class="section-head">
+            <div>
+              <h2>数据与关于</h2>
+              <p>管理工作区备份、软件版本以及官方下载安装入口。</p>
+            </div>
+          </div>
+          <div class="general-settings-grid">
+            <section class="knowledge-panel about-download-panel">
+              <div class="section-head compact-head">
+                <div>
+                  <h2>软件版本</h2>
+                  <p id="manualUpdateStatus">正在读取当前版本…</p>
+                </div>
+                <span class="version-badge" id="currentAppVersion">V3.0.0</span>
+              </div>
+              <div class="action-row compact-actions">
+                <button class="primary-action" id="manualUpdateCheck" type="button">检查更新</button>
+                <button class="ghost-action" id="websiteDownloadLink" type="button">官网下载</button>
+                <button class="ghost-action" id="historyDownloadLink" type="button">历史版本下载</button>
+              </div>
+            </section>
+            <div id="generalSettingsMigrationSlot"></div>
+          </div>
+        </section>
+
+        <section class="view local-search-settings-view" id="localImageSearchSettingsView">
+          <div class="section-head">
+            <div>
+              <h2>本地 AI 搜图设置</h2>
+              <p>管理离线模型和本机图库；原图目录始终保持只读。</p>
+            </div>
+          </div>
+          <div id="localSearchSettingsSlot"></div>
+        </section>
+
+        <section class="view local-search-view" id="localImageSearchView">
+          <div class="section-head local-search-heading">
+            <div>
+              <h2>本地 AI 搜图 <span class="version-badge">离线</span></h2>
+              <p>原图目录保持只读；模型、索引和缩略图仅保存在本机应用数据目录。</p>
+            </div>
+            <span class="local-search-runtime" id="localSearchRuntimeStatus">正在检查桌面能力…</span>
+          </div>
+
+          <div class="local-search-web-only hidden" id="localSearchWebOnly">
+            此功能为 Windows 10/11 x64 桌面版专属，请在 NGR AssetPilot 桌面软件中使用。
+          </div>
+
+          <div class="local-search-layout" id="localSearchDesktopContent">
+            <aside class="local-search-sidebar">
+              <section class="local-search-card">
+                <div class="local-search-card-head">
+                  <div><strong>本地模型</strong><small id="localSearchModelSummary">约 225 MB，首次使用需下载</small></div>
+                  <span class="local-search-state" id="localSearchModelState">检查中</span>
+                </div>
+                <progress id="localSearchModelProgress" max="100" value="0"></progress>
+                  <div class="action-row compact-actions">
+                    <button class="primary-action" id="localSearchDownloadModel" type="button">下载模型</button>
+                    <button class="ghost-action" id="localSearchImportModel" type="button">导入离线包</button>
+                    <button class="ghost-action hidden" id="localSearchExportModel" type="button">导出离线包</button>
+                    <button class="danger-action hidden" id="localSearchCancelDownload" type="button">取消</button>
+                  <button class="ghost-action hidden" id="localSearchRetryDownload" type="button">重试</button>
+                  <button class="danger-action hidden" id="localSearchRemoveModel" type="button">删除本地模型</button>
+                </div>
+                  <p class="local-search-privacy">纯离线电脑可导入 .ngrmodel 模型包；导入时会校验固定版本、文件大小和 SHA-256。模型就绪后远程访问始终关闭，图片和查询不会上传。</p>
+              </section>
+
+              <section class="local-search-card local-search-library-card">
+                <div class="local-search-card-head">
+                  <div><strong>我的图库</strong><small>递归扫描，支持断点增量更新</small></div>
+                  <button class="primary-action" id="localSearchCreateLibrary" type="button">新建图库</button>
+                </div>
+                <div class="local-search-library-list" id="localSearchLibraryList"></div>
+                <div class="local-search-empty" id="localSearchLibraryEmpty">选择或创建一个存放图片的文件夹</div>
+              </section>
+            </aside>
+
+            <div class="local-search-main">
+              <section class="local-search-card local-search-index-card">
+                <div class="local-search-card-head">
+                  <div>
+                    <strong id="localSearchActiveLibraryName">尚未选择图库</strong>
+                    <small id="localSearchLibraryMeta">创建图库后开始分析</small>
+                  </div>
+                  <div class="action-row compact-actions">
+                    <button class="primary-action" id="localSearchStartIndex" type="button" disabled>开始分析</button>
+                    <button class="danger-action hidden" id="localSearchCancelIndex" type="button">停止分析</button>
+                    <button class="danger-action" id="localSearchRemoveLibrary" type="button" disabled>删除索引</button>
+                  </div>
+                </div>
+                <div class="local-search-index-stats">
+                  <span>扫描 <strong id="localSearchScanned">0</strong></span>
+                  <span>分析 <strong id="localSearchAnalyzed">0</strong></span>
+                  <span>复用 <strong id="localSearchReused">0</strong></span>
+                  <span>跳过 <strong id="localSearchSkipped">0</strong></span>
+                  <span>错误 <strong id="localSearchErrors">0</strong></span>
+                </div>
+              </section>
+
+              <section class="local-search-card local-search-query-card">
+                <div class="local-search-tabs" role="tablist">
+                  <button class="active" id="localSearchImageTab" type="button" role="tab" aria-selected="true">截图 / 图片搜索</button>
+                  <button id="localSearchTextTab" type="button" role="tab" aria-selected="false">文字搜索</button>
+                </div>
+                <div class="local-search-query-panel" id="localSearchImagePanel">
+                  <div class="local-search-dropzone" id="localSearchDropzone" tabindex="0">
+                    <strong>Win + Shift + S 截图后，回到这里按 Ctrl + V</strong>
+                    <span>也可以拖入图片，或点击选择查询图片（仅在内存中使用）</span>
+                    <input id="localSearchImageInput" type="file" accept="image/*" />
+                    <img class="hidden" id="localSearchQueryPreview" alt="查询图片预览" />
+                  </div>
+                </div>
+                <div class="local-search-query-panel hidden" id="localSearchTextPanel">
+                  <div class="local-search-text-row">
+                    <input id="localSearchTextInput" type="text" maxlength="200" placeholder="例如：红色跑车、blue ocean sunset" />
+                    <button class="primary-action" id="localSearchTextSubmit" type="button">搜索</button>
+                  </div>
+                  <small>支持中文和英文，最多 200 字符。</small>
+                </div>
+                <div class="local-search-query-status" id="localSearchQueryStatus">选择已分析的图库后即可搜索</div>
+              </section>
+
+              <section class="local-search-results-section">
+                <div class="local-search-results-head">
+                  <strong>搜索结果</strong><span id="localSearchResultCount">默认返回前 50 项</span>
+                </div>
+                <div class="local-search-results" id="localSearchResults"></div>
+                <div class="local-search-empty" id="localSearchResultsEmpty">粘贴截图、选择图片或输入文字开始搜索</div>
+              </section>
+            </div>
           </div>
         </section>
 
         <section class="view rules-view" id="rulesView">
           <div class="section-head">
-            <h2>命名规则 <span class="version-badge">V3.0.0</span><time class="version-date" datetime="2026-08-19">更新于 2026-08-19</time></h2>
-            <p>这些设置会自动保存，并在命名流程中作为全局前缀使用。</p>
+            <h2>设置 <span class="version-badge">V3.0.0</span><time class="version-date" datetime="2026-08-19">更新于 2026-08-19</time></h2>
+            <p>配置命名规则、AI 接入、方案模板和工作区备份；更改会自动保存。</p>
           </div>
 
           <form id="rulesForm" class="rules-grid">
@@ -263,10 +378,31 @@
             <button id="deleteProject" class="danger-action" type="button">删除项目</button>
             <button id="resetRules" class="ghost-action" type="button">恢复默认</button>
           </div>
+          <section class="workspace-migration-card" id="workspaceMigrationCard" aria-labelledby="workspaceMigrationTitle">
+            <div class="workspace-migration-copy">
+              <h2 id="workspaceMigrationTitle">工作区迁移与备份</h2>
+              <p id="workspaceMigrationIntro">导出或导入 .ngrap 迁移包，保留设置、命名进度、切图和参考图。</p>
+            </div>
+            <label class="workspace-secret-option">
+              <input id="includeBackupSecrets" type="checkbox" />
+              <span>导出时携带加密凭据</span>
+            </label>
+            <label class="workspace-password-field">
+              <span>迁移密码</span>
+              <input id="workspaceBackupPassword" type="password" minlength="12" autocomplete="new-password" placeholder="导入加密迁移包时填写密码" />
+            </label>
+            <div class="workspace-migration-actions">
+              <button id="exportWorkspaceBackup" class="ghost-action" type="button">导出 .ngrap</button>
+              <button id="importWorkspaceBackup" class="primary-action" type="button">导入 .ngrap</button>
+              <input id="workspaceBackupInput" class="hidden" type="file" accept=".ngrap,application/zip,application/vnd.ngr.assetpilot+zip" />
+            </div>
+            <p class="workspace-migration-note">凭据仅在勾选后写入迁移包，并使用 PBKDF2-SHA256（600,000 次）与 AES-256-GCM 加密。请妥善保存密码。</p>
+            <p class="workspace-migration-status" id="workspaceMigrationStatus" aria-live="polite">导入前会自动生成一份当前工作区备份。</p>
+          </section>
           <div class="signature page-signature">
             <span>by五成（月财）</span>
             <a href="https://github.com/907609732/NGR-AI-AutoName-Tool.git" target="_blank" rel="noreferrer">GitHub：907609732/NGR-AI-AutoName-Tool</a>
-            <a href="https://ngr-assetpilot.chenyuecai.chatgpt.site" target="_blank" rel="noreferrer">官网：ngr-assetpilot.chenyuecai.chatgpt.site</a>
+            <a href="https://ngr.lttlt.top" target="_blank" rel="noreferrer">官网：ngr.lttlt.top</a>
             <p>若有合作意向或意见建议，可发送邮件至 907609732@qq.com，也欢迎前往 GitHub 提交反馈。</p>
           </div>
         </section>
@@ -289,11 +425,11 @@
               <button id="runSelectedNaming" class="primary-action" type="button">运行百度翻译API命名</button>
               <button id="stopNaming" class="danger-action hidden" type="button">终止命名</button>
               <details id="exportMenu" class="compact-action-menu export-action-menu">
-                <summary class="toolbar-icon-action" aria-label="打开导出菜单" title="导出命名图片">
+                <summary class="toolbar-download-action" aria-label="打开导出菜单" title="下载命名完成的图片">
                   <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M12 3v11m0 0 4-4m-4 4-4-4M5 15v4h14v-4" />
                   </svg>
-                  <span class="sr-only">导出命名图片</span>
+                  <span>下载命名完成的图片</span>
                 </summary>
                 <div class="compact-menu-panel export-menu-panel">
                   <strong>导出命名图片</strong>
@@ -361,12 +497,7 @@
           <div class="batch-tools list-batch-tools naming-batch-tools">
             <label>
               <span>前缀名</span>
-              <select id="workBasePrefix">
-                <option value="">无</option>
-                <option value="T_UI">T_UI</option>
-                <option value="T_UI_Img">T_UI_Img</option>
-                <option value="T_UI_Icon">T_UI_Icon</option>
-              </select>
+              <div id="workBasePrefix" class="prefix-picker-host"></div>
             </label>
             <label>
               <span>当前界面工程名</span>
@@ -670,6 +801,53 @@
         </div>
       </aside>
 
+      <div class="modal-overlay hidden" id="prefixLibraryOverlay" aria-hidden="true">
+        <section class="app-modal prefix-library-dialog" role="dialog" aria-modal="true" aria-labelledby="prefixLibraryTitle">
+          <div class="app-modal-head">
+            <div>
+              <h2 id="prefixLibraryTitle">新建/编辑前缀</h2>
+              <p>内置前缀不可修改；自定义前缀在批量、单图和画册中共用。</p>
+            </div>
+            <button class="settings-button" id="prefixLibraryClose" type="button" aria-label="关闭前缀编辑">×</button>
+          </div>
+          <div class="prefix-library-list" id="prefixLibraryList"></div>
+          <div class="prefix-library-add-row">
+            <input id="prefixLibraryNewValue" type="text" maxlength="64" placeholder="例如：T_UI_Bg" />
+            <button class="primary-action" id="prefixLibraryAdd" type="button">新增前缀</button>
+          </div>
+        </section>
+      </div>
+
+      <div class="modal-overlay hidden" id="updateDialogOverlay" aria-hidden="true">
+        <section class="app-modal update-dialog" role="dialog" aria-modal="true" aria-labelledby="updateDialogTitle">
+          <div class="app-modal-head">
+            <div>
+              <h2 id="updateDialogTitle">发现新版本</h2>
+              <p>查看版本内容并选择下载方式。</p>
+            </div>
+            <button class="settings-button" id="updateDialogClose" type="button" aria-label="关闭更新弹窗">×</button>
+          </div>
+          <dl class="update-version-grid">
+            <div><dt>当前版本</dt><dd id="updateCurrentVersion">—</dd></div>
+            <div><dt>最新版本</dt><dd id="updateLatestVersion">—</dd></div>
+            <div><dt>下载大小</dt><dd id="updateDownloadSize">—</dd></div>
+            <div><dt>发布日期</dt><dd id="updateReleaseDate">—</dd></div>
+          </dl>
+          <div class="update-release-notes">
+            <strong>新版介绍</strong>
+            <pre id="updateReleaseNotes">暂无更新说明</pre>
+          </div>
+          <div class="update-progress-wrap hidden" id="updateProgressWrap">
+            <progress id="updateProgress" max="100" value="0"></progress>
+            <span id="updateProgressText">等待下载</span>
+          </div>
+          <div class="action-row update-dialog-actions">
+            <button class="primary-action" id="updatePrimaryAction" type="button">下载更新</button>
+            <button class="ghost-action" id="updateWebsiteAction" type="button">前往官网</button>
+          </div>
+        </section>
+      </div>
+
       <div class="guide-overlay hidden" id="guideOverlay" aria-hidden="true">
         <div class="guide-highlight" id="guideHighlight"></div>
         <section class="guide-popover" id="guidePopover" role="dialog" aria-modal="true" aria-labelledby="guideTitle">
@@ -709,9 +887,12 @@
     <script src="vendor/fflate-0.8.3.min.js?v=V3.0.0"></script>
     <script src="historical-knowledge.js?v=V3.0.0"></script>
     <script src="js/config.js?v=V3.0.0"></script>
+    <script src="js/prefix-library.js?v=V3.0.0"></script>
     <script src="js/desktop-bridge.js?v=V3.0.0"></script>
+    <script src="js/updates.js?v=V3.0.0"></script>
     <script src="js/workspace-backup.js?v=V3.0.0"></script>
     <script src="js/state-dom.js?v=V3.0.0"></script>
+    <script src="js/local-image-search.js?v=V3.0.0"></script>
     <script src="js/lifecycle-rules.js?v=V3.0.0"></script>
     <script src="js/uploads-editor-translator.js?v=V3.0.0"></script>
     <script src="js/ai-workflow.js?v=V3.0.0"></script>

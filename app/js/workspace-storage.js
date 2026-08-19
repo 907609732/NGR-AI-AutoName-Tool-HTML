@@ -203,18 +203,26 @@ async function restoreNamingWorkspaceFromStorage() {
           return [];
         }
         const wasRunning = metadata.namingStatus === "running";
-        return [{
+        const restoredAsset = {
           ...metadata,
           file: record.file,
           url: "",
           namingStatus: wasRunning ? "idle" : metadata.namingStatus || "idle",
           statusMessage: wasRunning ? "上次命名任务已中断，可继续处理" : metadata.statusMessage || "",
-        }];
+        };
+        if (restoredAsset.customBasePrefix != null && !restoredAsset.customBasePrefixId) {
+          restoredAsset.customBasePrefixId = getPrefixEntryForValue(restoredAsset.customBasePrefix).id;
+        }
+        return [restoredAsset];
       });
       const referenceRecord = filesByKey.get(getWorkspaceReferenceFileKey(savedSession.id));
       if (savedSession.referenceName && !referenceRecord?.file) missingFileCount += 1;
       return {
         ...savedSession,
+        params: {
+          ...(savedSession.params || {}),
+          basePrefixId: getPrefixEntryForValue(savedSession.params?.basePrefixId || savedSession.params?.basePrefix).id,
+        },
         assets: restoredAssets,
         referenceFile: referenceRecord?.file || null,
         referenceName: savedSession.referenceName || referenceRecord?.file?.name || "",

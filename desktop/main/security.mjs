@@ -20,7 +20,14 @@ export function isAllowedExternalUrl(rawUrl) {
   if (typeof rawUrl !== "string" || rawUrl.length > 4096) return false;
   try {
     const parsed = new URL(rawUrl);
-    return parsed.protocol === "https:" && !parsed.username && !parsed.password;
+    const allowedHosts = new Set(["ngr.lttlt.top", "github.com"]);
+    return (
+      parsed.protocol === "https:" &&
+      !parsed.port &&
+      !parsed.username &&
+      !parsed.password &&
+      allowedHosts.has(parsed.hostname.toLowerCase())
+    );
   } catch {
     return false;
   }

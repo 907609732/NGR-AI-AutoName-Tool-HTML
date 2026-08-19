@@ -28,10 +28,10 @@
   }
 
   async function getInfo() {
-    if (!isDesktopRuntime()) return { runtime: "web", isDesktop: false, isTestBuild: false };
+    if (!isDesktopRuntime()) return { runtime: "web", isDesktop: false, edition: "dev" };
     if (hasCapability("environment.getInfo")) return { isDesktop: true, ...(await invoke("environment.getInfo")) };
     if (hasCapability("getInfo")) return { isDesktop: true, ...(await invoke("getInfo")) };
-    return { runtime: "desktop", isDesktop: true, isTestBuild: false };
+    return { runtime: "desktop", isDesktop: true, edition: "dev" };
   }
 
   function createDesktopResponse(result = {}) {
@@ -203,6 +203,12 @@
     return invoke("updater.install");
   }
 
+  function onUpdateStateChanged(callback) {
+    if (typeof callback !== "function") throw new TypeError("更新状态回调必须是函数");
+    if (!hasCapability("updater.onStateChanged")) return () => {};
+    return getCapability("updater.onStateChanged")(callback);
+  }
+
   function onBeforeQuit(callback) {
     if (typeof callback !== "function") throw new TypeError("退出前回调必须是函数");
     if (!hasCapability("app.onBeforeQuit")) return () => {};
@@ -221,6 +227,27 @@
     return true;
   }
 
+  const localImageSearch = Object.freeze({
+    isAvailable: () => hasCapability("localImageSearch.getModelStatus"),
+    getModelStatus: () => invoke("localImageSearch.getModelStatus"),
+    downloadModel: () => invoke("localImageSearch.downloadModel"),
+    cancelModelDownload: () => invoke("localImageSearch.cancelModelDownload"),
+    importModel: () => invoke("localImageSearch.importModel"),
+    exportModel: () => invoke("localImageSearch.exportModel"),
+    removeModel: () => invoke("localImageSearch.removeModel"),
+    listLibraries: () => invoke("localImageSearch.listLibraries"),
+    createLibrary: () => invoke("localImageSearch.createLibrary"),
+    removeLibrary: (request) => invoke("localImageSearch.removeLibrary", request),
+    startIndex: (request) => invoke("localImageSearch.startIndex", request),
+    getJobStatus: (request) => invoke("localImageSearch.getJobStatus", request),
+    cancelJob: (request) => invoke("localImageSearch.cancelJob", request),
+    searchByImage: (request) => invoke("localImageSearch.searchByImage", request),
+    searchByText: (request) => invoke("localImageSearch.searchByText", request),
+    getThumbnail: (request) => invoke("localImageSearch.getThumbnail", request),
+    openResult: (request) => invoke("localImageSearch.openResult", request),
+    revealResult: (request) => invoke("localImageSearch.revealResult", request),
+  });
+
   globalScope.NgrDesktopBridge = Object.freeze({
     isDesktopRuntime,
     hasCapability,
@@ -238,9 +265,11 @@
     checkForUpdates,
     downloadUpdate,
     installUpdate,
+    onUpdateStateChanged,
     onBeforeQuit,
     readyToQuit,
     openExternal,
+    localImageSearch,
   });
   globalScope.ngrFetch = request;
 })(window);

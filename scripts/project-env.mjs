@@ -15,8 +15,8 @@ export const projectPaths = Object.freeze({
   temp: path.join(projectRoot, ".tmp"),
   logs: path.join(projectRoot, "logs"),
   generated: path.join(projectRoot, "build", "generated"),
+  devArtifacts: path.join(projectRoot, "artifacts", "dev"),
   testArtifacts: path.join(projectRoot, "artifacts", "test"),
-  releaseArtifacts: path.join(projectRoot, "artifacts", "release"),
 });
 
 export function ensureProjectDirectories() {

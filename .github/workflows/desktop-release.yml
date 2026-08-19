@@ -35,7 +35,7 @@ jobs:
       - name: Test and build unsigned release
         run: |
           npm test
-          npm run build:release
+          npm run build
       - name: Upload reproducible build artifact
         uses: actions/upload-artifact@v4
         with:
