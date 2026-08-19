@@ -7,7 +7,7 @@ NGR AssetPilot｜AI资源领航是一款面向游戏 UI 资源整理流程的网
 
 作者：by 五成（月财）  
 合作与反馈：907609732@qq.com  
-GitHub：[907609732/NGR-AI-AutoName-Tool](https://github.com/907609732/NGR-AI-AutoName-Tool.git)
+GitHub：[907609732/NGR-AssetPilot-Web](https://github.com/907609732/NGR-AssetPilot-Web)
 官网：[ngr-assetpilot.chenyuecai.chatgpt.site](https://ngr-assetpilot.chenyuecai.chatgpt.site)
 
 ## 核心功能

@@ -1,6 +1,6 @@
 import { MotionController } from "./motion";
 
-const githubUrl = "https://github.com/907609732/NGR-AI-AutoName-Tool";
+const githubUrl = "https://github.com/907609732/NGR-AssetPilot-Web";
 
 const features = [
   {
@@ -89,7 +89,7 @@ export default function Home() {
         <div className="hero-glow hero-glow-one" />
         <div className="hero-glow hero-glow-two" />
         <div className="hero-copy">
-          <div className="eyebrow"><span /> V2.23 · 游戏 UI 资源工作台</div>
+          <div className="eyebrow"><span /> V2.26 · 游戏 UI 资源工作台</div>
           <h1>让每一张 UI 资源，<br /><em>驶向正确的名字。</em></h1>
           <p>
             NGR AssetPilot 将 AI 命名、团队知识库、规范检测和批量导出放进一个本地工作流，
@@ -114,7 +114,7 @@ export default function Home() {
           <div className="product-window">
             <div className="window-bar">
               <div className="window-brand"><LogoMark compact /><strong>NGR AssetPilot</strong></div>
-              <span className="window-version">V2.23</span>
+              <span className="window-version">V2.26</span>
             </div>
             <div className="window-body">
               <aside className="window-sidebar">
@@ -230,7 +230,7 @@ export default function Home() {
         <a className="primary-button lime" href={githubUrl} target="_blank" rel="noreferrer">
           在 GitHub 获取项目 <span aria-hidden="true">↗</span>
         </a>
-        <small>当前版本 V2.23 · 更新于 2026-06-29</small>
+        <small>当前版本 V2.26 · 更新于 2026-08-20</small>
       </section>
 
       <footer>
